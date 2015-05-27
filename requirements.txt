@@ -1,4 +1,5 @@
 -e git+https://github.com/enovance/pysflib.git#egg=pysflib
+basicauth
 pecan
 mock
 mockldap

@@ -24,6 +24,7 @@ import logging
 import requests
 from requests.exceptions import ConnectionError
 
+from basicauth import encode
 from M2Crypto import RSA
 
 from pecan import expose, response, conf, abort, render
@@ -264,23 +265,38 @@ class LoginController(RestController):
             user = result[0]  # user is a tuple
             mail = user[1].get(config['mail'], [None])
             lastname = user[1].get(config['sn'], [None])
-            return mail[0], lastname[0]
+            return mail[0], lastname[0], []
 
         logger.error('LDAP client search failed')
         return None
+
+    def check_localdb_user(self, config, username, password):
+        bind_url = urllib.basejoin(config['managesf_url'], '/bind')
+        headers = {"Authorization": encode(username, password)}
+        response = requests.get(bind_url, headers=headers)
+
+        if response.status_code > 399:
+            logger.error('localdb auth failed: %s' % response)
+            return None
+        infos = response.json
+        return infos['email'], infos['fullname'], [infos['sshkey'], ]
 
     def check_valid_user(self, username, password):
         user = conf.auth.get('users', {}).get(username)
         if user:
             salted_password = user.get('password')
             if salted_password == crypt.crypt(password, salted_password):
-                return user.get('mail'), user.get('lastname')
+                return user.get('mail'), user.get('lastname'), []
+
+        localdb = conf.auth.get('localdb')
+        if localdb:
+            return self.check_localdb_user(localdb, username, password)
 
         ldap = conf.auth.get('ldap')
         if ldap:
             return self.check_ldap_user(ldap, username, password)
 
-        logger.error('User not autheticated')
+        logger.error('User not authenticated')
         return None
 
     @expose()
@@ -300,9 +316,9 @@ class LoginController(RestController):
                 response.status = 401
                 return render('login.html',
                               dict(back=back, message='Authorization failed.'))
-            email, lastname = valid_user
+            email, lastname, sshkey = valid_user
             logger.info('Client requests authentication success %s' % username)
-            setup_response(username, back, email, lastname)
+            setup_response(username, back, email, lastname, sshkey)
         else:
             logger.error('Client requests authentication without credentials.')
             response.status = 401
