@@ -271,7 +271,7 @@ class LoginController(RestController):
         return None
 
     def check_localdb_user(self, config, username, password):
-        bind_url = urllib.basejoin(config['managesf_url'], '/bind')
+        bind_url = urllib.basejoin(config['managesf_url'], '/manage/bind')
         headers = {"Authorization": encode(username, password)}
         response = requests.get(bind_url, headers=headers)
 
