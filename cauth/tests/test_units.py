@@ -149,9 +149,12 @@ class FakeResponse():
     def __init__(self, code, content=None, is_json=False):
         self.status_code = code
         self.content = content
-        self.json = {}
+        self._json = {}
         if is_json and content:
-            self.json = json.loads(content)
+            self._json = json.loads(content)
+
+    def json(self, *args, **kwargs):
+        return self._json
 
 
 class TestUserDetails(TestCase):
@@ -295,7 +298,7 @@ class TestLoginController(TestCase):
             ret = lc.check_valid_user('les', 'Wynona')
             self.assertIn('Les Claypool', ret)
             self.assertIn('les@primus.com', ret)
-            self.assertIn(['Jerry was a race car driver', ], ret)
+            self.assertIn([{'key': 'Jerry was a race car driver'}, ], ret)
         with patch('requests.get') as g:
             g.return_value = FakeResponse(401, 'Unauthorized')
             ret = lc.check_valid_user('bootsy', 'collins')

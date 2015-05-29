@@ -278,8 +278,8 @@ class LoginController(RestController):
         if response.status_code > 399:
             logger.error('localdb auth failed: %s' % response)
             return None
-        infos = response.json
-        return infos['email'], infos['fullname'], [infos['sshkey'], ]
+        infos = response.json()
+        return infos['email'], infos['fullname'], [{'key': infos['sshkey']}, ]
 
     def check_valid_user(self, username, password):
         user = conf.auth.get('users', {}).get(username)
