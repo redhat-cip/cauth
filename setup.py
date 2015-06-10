@@ -26,15 +26,27 @@ try:
 except:
     pass
 
+
+VERSION = '0.3.0'
+
+
+# use requirements.txt for install
+INSTALL_REQUIRES = []
+
+
 setup(
     name='cauth',
-    version='0.2.0',
-    description='',
-    author='',
-    author_email='',
+    version=VERSION,
+    description='Multiprotocol SSO auth frontend for other services',
+    author='Software Factory',
+    author_email='softwarefactory@enovance.com',
     test_suite='nose.collector',
     zip_safe=False,
     include_package_data=True,
     package_data={'cauth': ['template/*', ]},
-    packages=find_packages(exclude=['ez_setup'])
+    packages=find_packages(exclude=['ez_setup']),
+    install_requires=INSTALL_REQUIRES,
+    url='http://softwarefactory.enovance.com/r/gitweb?p=cauth.git;a=summary',
+    download_url='https://github.com/enovance/cauth/tarball/%s' % VERSION,
+    keywords=['software factory', 'SSO', 'Authentication'],
 )
