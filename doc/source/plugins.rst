@@ -1,0 +1,6 @@
+.. toctree::
+
+Plugins
+=======
+
+TODO

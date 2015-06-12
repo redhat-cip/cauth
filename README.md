@@ -13,10 +13,6 @@ Clone this repository, then::
 
   cd cauth && pip install .
 
-Setup
------
-
-TODO
 
 Contribute
 ----------

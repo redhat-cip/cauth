@@ -23,8 +23,8 @@ from cauth import auth
 from cauth.controllers import base, github
 
 
-LOGOUT_MSG = "You have been successfully logged " \
-             "out of all the Software factory services."
+# TODO(mhu) This should be in the app config, and i18n'zed
+LOGOUT_MSG = "You have been successfully logged out of all the services."
 
 logger = logging.getLogger(__name__)
 
