@@ -45,8 +45,18 @@ setup(
     include_package_data=True,
     package_data={'cauth': ['template/*', ]},
     packages=find_packages(exclude=['ez_setup']),
+
     install_requires=INSTALL_REQUIRES,
     url='http://softwarefactory.enovance.com/r/gitweb?p=cauth.git;a=summary',
     download_url='https://github.com/enovance/cauth/tarball/%s' % VERSION,
     keywords=['software factory', 'SSO', 'Authentication'],
+
+    entry_points={
+        'cauth.authentication': [
+            ('GithubPersonalAccessToken = '
+             'cauth.auth.github:GithubPersonalAccessTokenAuthPlugin'),
+            ('Github = cauth.auth.github:GithubAuthPlugin'),
+            ('Password = cauth.auth.password:PasswordAuthPlugin')
+        ]
+    },
 )

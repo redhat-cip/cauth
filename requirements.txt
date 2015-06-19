@@ -12,3 +12,4 @@ requests>=2.7.0
 sphinx
 pygerrit
 python-redmine
+stevedore

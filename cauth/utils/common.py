@@ -24,6 +24,10 @@ from pecan import response, conf
 from cauth.utils import userdetails
 
 
+LOGOUT_MSG = "You have been successfully logged " \
+             "out of all the Software factory services."
+
+
 def signature(data):
     rsa_priv = RSA.load_key(conf.app['priv_key_path'])
     dgst = hashlib.sha1(data).digest()

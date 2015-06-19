@@ -18,7 +18,9 @@ import logging
 
 from pecan import expose, response, conf, abort, render
 from pecan.rest import RestController
+from stevedore import driver
 
+from cauth.auth import base
 from cauth.utils import common
 
 
@@ -26,18 +28,6 @@ logger = logging.getLogger(__name__)
 
 
 class BaseLoginController(RestController):
-    def __init__(self, *args, **kwargs):
-        self.conf = conf
-        self.auth_methods = []
-
-    def register(self, auth_method):
-        self.auth_methods.append(auth_method)
-
-    def check_valid_user(self, username, password):
-        for auth_method in self.auth_methods:
-            authenticated = auth_method(self.conf, username, password)
-            if authenticated:
-                return authenticated
 
     @expose()
     def post(self, **kwargs):
@@ -47,24 +37,29 @@ class BaseLoginController(RestController):
             logger.error('Client requests authentication without back url.')
             abort(422)
 
-        username = kwargs.get('username')
-        password = kwargs.get('password')
-        if username and password:
-            valid_user = self.check_valid_user(username, password)
-            if not valid_user:
-                logger.error('Client requests authentication with wrong'
-                             ' credentials.')
-                response.status = 401
-                return render('login.html',
-                              dict(back=back, message='Authorization failed.'))
-            email, lastname, sshkey = valid_user
-            logger.info('Client requests authentication success %s' % username)
-            common.setup_response(username, back, email, lastname, sshkey)
-        else:
-            logger.error('Client requests authentication without credentials.')
+        auth_context = kwargs
+        auth_context['response'] = response
+
+        # TODO(mhu) later, this shall be chosen automatically
+        auth_plugin = driver.DriverManager(
+            namespace='cauth.authentication',
+            name='Password',
+            invoke_on_load=True,
+            invoke_args=(conf,)).driver
+
+        try:
+            valid_user = auth_plugin.authenticate(**auth_context)
+        except base.UnauthenticatedError:
             response.status = 401
-            return render('login.html', dict(back=back,
-                                             message='Authorization failed.'))
+            return render('login.html',
+                          dict(back=back, message='Authorization failed.'))
+        if valid_user:
+            logger.info('%s successfully authenticated' % valid_user['login'])
+            common.setup_response(valid_user['login'],
+                                  back,
+                                  valid_user['email'],
+                                  valid_user['name'],
+                                  valid_user['ssh_keys'])
 
     @expose(template='login.html')
     def get(self, **kwargs):
