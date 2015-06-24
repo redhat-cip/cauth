@@ -1,1 +1,1 @@
-app.wsgi
+../app.wsgi
