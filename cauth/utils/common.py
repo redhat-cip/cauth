@@ -14,9 +14,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import time
-import hashlib
 import base64
+import hashlib
+import time
 import urllib
 
 from M2Crypto import RSA
@@ -47,19 +47,19 @@ def create_ticket(**kwargs):
     return ticket
 
 
-def pre_register_user(username, email=None, lastname=None, keys=None):
-    if lastname is None:
-        lastname = 'User %s' % username
-    if not email:
-        email = '%s@%s' % (username, conf.app['cookie_domain'])
+def pre_register_user(user):
+    if user.get('name', None) is None:
+        user['name'] = 'User %s' % user['login']
+    if user.get('email', None) is None:
+        user['email'] = '%s@%s' % (user['login'], conf.app['cookie_domain'])
 
     udc = userdetails.UserDetailsCreator(conf)
-    udc.create_user(username, email, lastname, keys)
+    udc.create_user(user)
 
 
-def setup_response(username, back, email=None, lastname=None, keys=None):
-    pre_register_user(username, email, lastname, keys)
-    ticket = create_ticket(uid=username,
+def setup_response(user, back):
+    pre_register_user(user)
+    ticket = create_ticket(uid=user['login'],
                            validuntil=(
                                time.time() + conf.app['cookie_period']))
     enc_ticket = urllib.quote_plus(ticket)

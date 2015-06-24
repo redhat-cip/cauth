@@ -13,19 +13,15 @@
 # under the License.
 
 from unittest import TestCase
-from mock import patch, Mock
+from mock import patch
 from M2Crypto import RSA, BIO
 
 from webtest import TestApp
 from pecan import load_app
 
-from cauth.utils.userdetails import Gerrit
 from cauth.utils import common
-from cauth.tests.common import FakeResponse, githubmock_request
+from cauth.tests.common import dummy_conf, FakeResponse, githubmock_request
 
-import crypt
-import tempfile
-import json
 import os
 
 import httmock
@@ -34,78 +30,6 @@ import urlparse
 
 def raise_(ex):
     raise ex
-
-
-class dummy_conf():
-    def __init__(self):
-        self.redmine = {'apikey': 'XXX',
-                        'apihost': 'api-redmine.test.dom',
-                        'apiurl': 'http://api-redmine.test.dom',
-                        }
-        self.gerrit = {'url': 'XXX',
-                       'admin_user': 'admin',
-                       'admin_password': 'wxcvbn',
-                       'db_host': 'mysql.tests.dom',
-                       'db_name': 'gerrit',
-                       'db_user': 'gerrit',
-                       'db_password': 'wxcvbn',
-                       }
-        self.app = {'priv_key_path': '/tmp/priv_key',
-                    'cookie_domain': 'tests.dom',
-                    'cookie_period': 3600,
-                    'root': 'cauth.controllers.root.RootController',
-                    'template_path': os.path.join(os.path.dirname(__file__),
-                                                  '../templates'),
-                    'modules': ['cauth'],
-                    'debug': True,
-                    }
-        self.auth = {'ldap':
-                     {'host': 'ldap://ldap.tests.dom',
-                         'dn': 'cn=%(username)s,ou=Users,dc=tests,dc=dom',
-                         'sn': 'sn',
-                         'mail': 'mail', },
-                     'github':
-                     {'top_domain': 'tests.dom',
-                      'auth_url': 'https://github.com/login/oauth/authorize',
-                      'redirect_uri':
-                      'http://tests.dom/auth/login/github/callback"',
-                      'client_id': 'XXX',
-                      'client_secret': 'YYY', },
-                     'users':
-                         {
-                             "user1": {
-                                 "lastname": "Demo user1",
-                                 "mail": "user1@tests.dom",
-                                 "password": crypt.crypt(
-                                     "userpass", "$6$EFeaxATWohJ")
-                             }
-                         },
-                     'localdb':
-                         {
-                             "managesf_url": "http://tests.dom",
-                         },
-                     }
-        self.sqlalchemy = {'url': 'sqlite:///%s' % tempfile.mkstemp()[1],
-                           'echo': False,
-                           'encoding': 'utf-8',
-                           }
-        self.logout = {'gerrit': {'url': '/r/logout'}}
-        self.logging = {'loggers':
-                        {'root': {'level': 'INFO', 'handlers': ['console']},
-                         'cauth': {'level': 'DEBUG', 'handlers': ['console']},
-                         'py.warnings': {'handlers': ['console']},
-                         '__force_dict__': True},
-                        'handlers': {
-                            'console': {'level': 'DEBUG',
-                                        'class': 'logging.StreamHandler',
-                                        'formatter': 'simple'}},
-                        'formatters': {
-                            'simple': {
-                                'format': (
-                                    '%(asctime)s %(levelname)-5.5s [%(name)s]'
-                                    '[%(threadName)s] %(message)s')}
-                            }
-                        }
 
 
 def redmine_create_user_mock(*args, **kwargs):
@@ -132,7 +56,7 @@ class FunctionalTest(TestCase):
                   'gerrit': c.gerrit,
                   'app': c.app,
                   'auth': c.auth,
-                  'logout': c.logout,
+                  'services': c.services,
                   'sqlalchemy': c.sqlalchemy}
         # deactivate loggin that polute test output
         # even nologcapture option of nose effetcs
@@ -141,86 +65,6 @@ class FunctionalTest(TestCase):
 
     def tearDown(self):
         pass
-
-
-class TestUserDetails(TestCase):
-    @classmethod
-    def setupClass(cls):
-        cls.conf = dummy_conf()
-
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
-    def gerrit_add_sshkeys_mock(self, *args, **kwargs):
-        self.assertIn('data', kwargs)
-        self.assertIn('auth', kwargs)
-        self.key_amount_added += 1
-
-    def gerrit_get_account_id_mock(self, *args, **kwargs):
-        data = json.dumps({'_account_id': 42})
-        # Simulate the garbage that occurs in live tests
-        data = 'garb' + data
-        return FakeResponse(200, data)
-
-    def gerrit_get_account_id_mock2(self, *args, **kwargs):
-        data = json.dumps({})
-        # Simulate the garbage that occurs in live tests
-        data = 'garb' + data
-        return FakeResponse(200, data)
-
-    def test_gerrit_install_ssh_keys(self):
-        ger = Gerrit(self.conf)
-        self.key_amount_added = 0
-        keys = [{'key': 'k1'}, {'key': 'k2'}]
-        with patch('cauth.utils.userdetails.requests') as r:
-            r.post = self.gerrit_add_sshkeys_mock
-            ger.install_sshkeys('john', keys)
-        self.assertEqual(self.key_amount_added, len(keys))
-
-    def test_gerrit_add_in_acc_external(self):
-        class FakeDB():
-            def __init__(self, success=True):
-                self.success = success
-
-            def cursor(self):
-                return FakeCursor(self.success)
-
-            def commit(self):
-                pass
-
-        class FakeCursor():
-            def __init__(self, success):
-                self.success = success
-
-            def execute(self, sql):
-                if not self.success:
-                    raise Exception
-
-        ger = Gerrit(self.conf)
-        with patch('cauth.utils.userdetails.MySQLdb') as m:
-            m.connect = lambda *args, **kwargs: FakeDB()
-            ret = ger.add_in_acc_external(42, 'john')
-        self.assertEqual(True, ret)
-        with patch('cauth.utils.userdetails.MySQLdb') as m:
-            m.connect = lambda *args, **kwargs: FakeDB(False)
-            ret = ger.add_in_acc_external(42, 'john')
-        self.assertEqual(False, ret)
-
-    def test_create_gerrit_user(self):
-        ger = Gerrit(self.conf)
-        with patch('cauth.utils.userdetails.requests') as r:
-            r.put = lambda *args, **kwargs: None
-            r.get = self.gerrit_get_account_id_mock
-            ger.add_in_acc_external = Mock()
-            ger.create_gerrit_user('john', 'john@tests.dom', 'John Doe', [])
-            self.assertEqual(True, ger.add_in_acc_external.called)
-        with patch('cauth.utils.userdetails.requests') as r:
-            r.put = lambda *args, **kwargs: None
-            r.get = self.gerrit_get_account_id_mock2
-            ger.add_in_acc_external = Mock()
-            ger.create_gerrit_user('john', 'john@tests.dom', 'John Doe', [])
-            self.assertEqual(False, ger.add_in_acc_external.called)
 
 
 class TestUtils(TestCase):
@@ -239,12 +83,11 @@ class TestUtils(TestCase):
     def test_pre_register_user(self):
         p = 'cauth.utils.userdetails.UserDetailsCreator.create_user'
         with patch(p) as cu:
-            common.pre_register_user('john')
+            common.pre_register_user({'login': 'john'})
             cu.assert_called_once_with(
-                'john',
-                'john@%s' % self.conf.app['cookie_domain'],
-                'User john',
-                None)
+                {'login': 'john',
+                 'email': 'john@%s' % self.conf.app['cookie_domain'],
+                 'name': 'User john'})
 
     def test_create_ticket(self):
         with patch('cauth.utils.common.signature') as sign:
@@ -263,7 +106,7 @@ class TestCauthApp(FunctionalTest):
     def test_post_login(self):
         # Ldap and Gitub Oauth backend are mocked automatically
         # if the domain is tests.dom
-        with patch('cauth.utils.userdetails.requests'):
+        with patch('cauth.service.gerrit.requests'):
             with patch('requests.get'):
                 response = self.app.post('/login',
                                          params={'username': 'user1',

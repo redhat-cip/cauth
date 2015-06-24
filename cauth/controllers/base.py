@@ -55,11 +55,8 @@ class BaseLoginController(RestController):
                           dict(back=back, message='Authorization failed.'))
         if valid_user:
             logger.info('%s successfully authenticated' % valid_user['login'])
-            common.setup_response(valid_user['login'],
-                                  back,
-                                  valid_user['email'],
-                                  valid_user['name'],
-                                  valid_user['ssh_keys'])
+            common.setup_response(valid_user,
+                                  back)
 
     @expose(template='login.html')
     def get(self, **kwargs):

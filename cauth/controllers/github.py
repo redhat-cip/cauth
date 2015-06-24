@@ -53,11 +53,8 @@ class PersonalAccessTokenGithubController(object):
         msg = '%s (%s) authenticated with Github Personal Access Token.'
         logger.info(msg % (valid_user['login'],
                            valid_user['email']))
-        common.setup_response(valid_user['login'],
-                              auth_context['back'],
-                              valid_user['email'],
-                              valid_user['name'],
-                              valid_user['ssh_keys'])
+        common.setup_response(valid_user,
+                              auth_context['back'])
 
 
 class GithubController(object):
@@ -90,11 +87,8 @@ class GithubController(object):
         logger.info(
             '%s (%s) successfully authenticated with github.'
             % (valid_user['login'], valid_user['email']))
-        common.setup_response(valid_user['login'],
-                              back,
-                              valid_user['email'],
-                              valid_user['name'],
-                              valid_user['ssh_keys'])
+        common.setup_response(valid_user,
+                              back)
 
     @expose()
     def index(self, **kwargs):

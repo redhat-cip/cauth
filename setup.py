@@ -57,6 +57,10 @@ setup(
              'cauth.auth.github:GithubPersonalAccessTokenAuthPlugin'),
             ('Github = cauth.auth.github:GithubAuthPlugin'),
             ('Password = cauth.auth.password:PasswordAuthPlugin')
+        ],
+        'cauth.service': [
+            'gerrit = cauth.service.gerrit:GerritServicePlugin',
+            'redmine = cauth.service.redmine:RedmineServicePlugin',
         ]
     },
 )
