@@ -19,7 +19,7 @@ import logging
 from pecan import expose, response, conf
 from pecan.rest import RestController
 
-from cauth.controllers import base, github
+from cauth.controllers import base, github, introspection
 from cauth.utils.common import LOGOUT_MSG
 
 
@@ -37,5 +37,6 @@ class RootController(object):
     login = base.BaseLoginController()
     login.github = github.GithubController()
     login.githubAPIkey = github.PersonalAccessTokenGithubController()
+    about = introspection.IntrospectionController()
 
     logout = LogoutController()

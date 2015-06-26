@@ -314,3 +314,12 @@ class TestCauthApp(FunctionalTest):
         self.assertEqual(response.status_int, 200)
         self.assertTrue('auth_pubtkt=;' in response.headers['Set-Cookie'])
         self.assertGreater(response.body.find(common.LOGOUT_MSG), 0)
+
+    def test_introspection(self):
+        response = self.app.get('/about/').json
+        self.assertEqual('cauth',
+                         response['service']['name'])
+        self.assertEqual(set(['Password',
+                              'Github',
+                              'GithubPersonalAccessToken']),
+                         set(response['service']['auth_methods']))
