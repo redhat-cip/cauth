@@ -1,7 +1,20 @@
 .. toctree::
 
-Supported authentication methods
-================================
+authentication
+==============
+
+Authentication endpoint
+-----------------------
+
+cauth exposes a unique authentication endpoint for clients, at "/login". The
+authentication parameters must be passed to it as a JSON encoded payload. The
+contents are dependent on the chosen authentication method.
+
+Example:
+
+.. code-block:: bash
+
+  curl -X POST -i -d '{"method": "Password", "back": "http://localhost:8080", "args": {"username": "user1", "password": "password"} }' -H "Content-Type: application/json" http://cauth_server/login
 
 Password-based authentication
 -----------------------------
@@ -24,6 +37,17 @@ order:
 Please note that using hard-coded users in the configuration file should be only
 used for quick test deployments; passwords hashes are stored in clear view and adding,
 modifying or deleting users requires a service restart.
+
+JSON Payload
+............
+
+..code-block: JSON
+
+  {"method": "Password",
+   "back": "callback/url",
+   "args": {"username": "user",
+            "password": "password"}
+  }
 
 Configuration
 .............
@@ -99,6 +123,28 @@ The following methods are supported:
 * authentication with a `personal access token <https://github.com/settings/tokens>`_
 
 It is possible to filter users by their declared organizations on GitHub.
+
+JSON Payload
+............
+
+oAuth authentication
+
+..code-block: JSON
+
+  {"method": "Github",
+   "back": "callback/url",
+   "args": {}
+  }
+
+Personal access token authentication
+
+..code-block: JSON
+
+  {"method": "GithubPersonalAccessToken",
+   "back": "callback/url",
+   "args": {"token": "your_github_token"}
+  }
+
 
 Configuration
 .............

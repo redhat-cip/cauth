@@ -100,7 +100,7 @@ class TestCauthApp(FunctionalTest):
     def test_get_login(self):
         response = self.app.get('/login', params={'back': 'r/'})
         self.assertGreater(response.body.find('value="r/"'), 0)
-        self.assertGreater(response.body.find('/auth/login/github?back=r/'), 0)
+        self.assertGreater(response.body.find('Login via Github'), 0)
         self.assertEqual(response.status_int, 200)
 
     def test_post_login(self):
@@ -131,6 +131,50 @@ class TestCauthApp(FunctionalTest):
                                          status="*")
             self.assertEqual(response.status_int, 401)
 
+    def test_json_password_login(self):
+        """Test passing login info as a JSON payload"""
+        payload = {'method': 'Password',
+                   'back': 'r/',
+                   'args': {'username': 'user1',
+                            'password': 'userpass'}, }
+        # TODO(mhu) possible refactoring with previous function
+        with patch('cauth.service.gerrit.requests'):
+            with patch('requests.get'):
+                response = self.app.post_json('/login',
+                                              payload)
+        self.assertEqual(response.status_int, 303)
+        self.assertEqual('http://localhost/r/', response.headers['Location'])
+        self.assertIn('Set-Cookie', response.headers)
+        with patch('requests.get'):
+            # baduser is not known from the mocked backend
+            with patch('cauth.utils.userdetails'):
+                response = self.app.post_json('/login',
+                                              payload,
+                                              status="*")
+            self.assertEqual(response.status_int, 401)
+            # Try with no creds
+            with patch('cauth.utils.userdetails'):
+                response = self.app.post_json('/login',
+                                              {'method': 'Password',
+                                               'args': {},
+                                               'back': 'r/'},
+                                              status="*")
+            self.assertEqual(response.status_int, 401)
+
+    def test_unknown_auth_method_login(self):
+        """Test rejection upon trying to authenticate with an unknown method"""
+        payload = {'method': 'ErMahGerd',
+                   'back': 'r/',
+                   'args': {'ErMahGarg1': 'berks',
+                            'ErmahGarg2': 'blorks'}, }
+        with patch('requests.get'):
+            # baduser is not known from the mocked backend
+            with patch('cauth.utils.userdetails'):
+                response = self.app.post_json('/login',
+                                              payload,
+                                              status="*")
+            self.assertEqual(response.status_int, 401)
+
     def test_github_login(self):
         with httmock.HTTMock(githubmock_request):
             with patch('cauth.utils.userdetails'):
@@ -150,6 +194,40 @@ class TestCauthApp(FunctionalTest):
                 self.assertEqual(
                     ['http://tests.dom/auth/login/github/callback"'],
                     parsed_qs.get('redirect_uri'))
+
+    def test_json_github_login(self):
+        with httmock.HTTMock(githubmock_request):
+            with patch('cauth.utils.userdetails'):
+                payload = {'back': 'r/',
+                           'method': 'Github',
+                           'args': {}, }
+                response = self.app.post_json('/login',
+                                              payload)
+                self.assertEqual(response.status_int, 302)
+                parsed = urlparse.urlparse(response.headers['Location'])
+                parsed_qs = urlparse.parse_qs(parsed.query)
+                self.assertEqual('https', parsed.scheme)
+                self.assertEqual('github.com', parsed.netloc)
+                self.assertEqual('/login/oauth/authorize', parsed.path)
+                self.assertEqual(
+                    ['user:email, read:public_key, read:org'],
+                    parsed_qs.get('scope'))
+                self.assertEqual(
+                    ['http://tests.dom/auth/login/github/callback"'],
+                    parsed_qs.get('redirect_uri'))
+
+    def test_json_github_API_token_login(self):
+        payload = {'method': 'GithubPersonalAccessToken',
+                   'back': 'r/',
+                   'args': {'token': 'user6_token'}, }
+        # TODO(mhu) possible refactoring with previous function
+        with patch('cauth.utils.userdetails.UserDetailsCreator.create_user'):
+            with patch('requests.get'):
+                response = self.app.post_json('/login',
+                                              payload)
+        self.assertEqual(response.status_int, 303)
+        self.assertEqual('http://localhost/r/', response.headers['Location'])
+        self.assertIn('Set-Cookie', response.headers)
 
     def test_get_logout(self):
         # Ensure client SSO cookie content is deleted

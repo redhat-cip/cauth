@@ -63,6 +63,10 @@ class GithubPersonalAccessTokenAuthPlugin(BaseGithubAuthPlugin):
                             auth=basic_auth)
         return resp
 
+    @classmethod
+    def get_args(cls):
+        return {"token": {"description": "the user's personal API token"}}
+
     def authenticate(self, **auth_context):
         token = auth_context.get('token', None)
         try:
@@ -93,6 +97,11 @@ class GithubPersonalAccessTokenAuthPlugin(BaseGithubAuthPlugin):
 class GithubAuthPlugin(BaseGithubAuthPlugin):
     """Allows a Github user to authenticate with the oAuth protocol.
     """
+
+    @classmethod
+    def get_args(cls):
+        # not relevant here
+        return {}
 
     def get_user_orgs(self, token):
         resp = requests.get("https://api.github.com/user/orgs",

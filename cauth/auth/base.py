@@ -48,6 +48,12 @@ class AuthProtocolPlugin(object):
                    "is not available" % self._config_section)
             raise AuthProtocolNotAvailableError(msg)
 
+    @classmethod
+    def get_args(cls):
+        """Get a dictionary of arguments expected by the plugin.
+        :returns: {'arg1': {'description': 'my fancy argument'},
+                   'arg2': {'description': 'my other fancy argument'}}"""
+
     @abc.abstractmethod
     def authenticate(self, **auth_context):
         """authenticate the user for the given auth protocol.

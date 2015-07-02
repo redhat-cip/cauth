@@ -13,6 +13,7 @@
             <div class="panel-body">
                 <form method="post" action="/auth/login/" target="_top">
                     <div>
+                        <input type="hidden" name="method" value="Password">
                         <label for="username">Username</label>
                         <input name="username" id="username" type="text" value="" placeholder="Username" required autofocus>
                     </div>
@@ -26,6 +27,10 @@
                 </form>
             </div>
         </div>
-        Or <a href='/auth/login/github?back=${back}' target="_top">Login via Github</a>
+        <form method="post" action="/auth/login/" target="_top">
+            <input type="hidden" name="method" value="Github">
+            <input type="hidden" name="back" value="${back}">
+        Or <button type="submit">Login via Github</button>
+        </form>
     </body>
 </html>

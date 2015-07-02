@@ -16,7 +16,7 @@
 
 import logging
 
-from pecan import expose, response, conf, abort, render
+from pecan import expose, response, request, conf, abort, render
 from pecan.rest import RestController
 from stevedore import driver
 
@@ -29,34 +29,65 @@ logger = logging.getLogger(__name__)
 
 class BaseLoginController(RestController):
 
-    @expose()
-    def post(self, **kwargs):
-        logger.info('Client requests authentication.')
-        back = kwargs.get('back')
-        if not back:
+    def make_auth_info(self, kwargs):
+        """Build the new auth info structure from args posted with a form"""
+        auth_info = {}
+        auth_info['back'] = kwargs.get('back', None)
+        auth_info['method'] = kwargs.get('method', 'Password')
+        auth_info['args'] = {}
+        try:
+            auth_args = driver.DriverManager(
+                namespace='cauth.authentication',
+                name=auth_info['method'],
+                invoke_on_load=False).driver.get_args()
+            for arg in auth_args.keys():
+                auth_info['args'][arg] = kwargs.get(arg, '')
+        except RuntimeError:
+            # will be caught later on
+            pass
+        return auth_info
+
+    def _json_login(self, auth_info):
+        auth_context = {}
+        auth_context['response'] = response
+        auth_context['back'] = auth_info.get('back', None)
+        if not auth_context['back']:
             logger.error('Client requests authentication without back url.')
             abort(422)
-
-        auth_context = kwargs
-        auth_context['response'] = response
-
-        # TODO(mhu) later, this shall be chosen automatically
-        auth_plugin = driver.DriverManager(
-            namespace='cauth.authentication',
-            name='Password',
-            invoke_on_load=True,
-            invoke_args=(conf,)).driver
-
+        auth_context.update(auth_info.get('args', {}))
+        auth_method = auth_info.get('method', 'NO_METHOD')
         try:
+            auth_plugin = driver.DriverManager(
+                namespace='cauth.authentication',
+                name=auth_method,
+                invoke_on_load=True,
+                invoke_args=(conf,)).driver
             valid_user = auth_plugin.authenticate(**auth_context)
+        except RuntimeError:
+            response.status = 401
+            msg = '"%s" is not a valid authentication method' % auth_method
+            logger.error(msg)
+            return render('login.html',
+                          dict(back=auth_context['back'], message=msg))
         except base.UnauthenticatedError:
             response.status = 401
             return render('login.html',
-                          dict(back=back, message='Authorization failed.'))
+                          dict(back=auth_context['back'],
+                               message='Authorization failed.'))
         if valid_user:
             logger.info('%s successfully authenticated' % valid_user['login'])
-            common.setup_response(valid_user,
-                                  back)
+            common.setup_response(valid_user, auth_context['back'])
+
+    @expose()
+    def post(self, **kwargs):
+        logger.info('Client requests authentication.')
+        try:
+            auth_info = request.json
+            self._json_login(auth_info)
+        except ValueError:
+            # old-style values passed through a form
+            auth_info = self.make_auth_info(kwargs)
+            self._json_login(auth_info)
 
     @expose(template='login.html')
     def get(self, **kwargs):

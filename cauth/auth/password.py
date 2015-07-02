@@ -32,7 +32,15 @@ from cauth.auth import base
 logger = logging.getLogger(__name__)
 
 
-class LocalUserAuthPlugin(base.AuthProtocolPlugin):
+class BasePasswordAuthPlugin(base.AuthProtocolPlugin):
+
+    @classmethod
+    def get_args(cls):
+        return {'username': {'description': 'user login'},
+                'password': {'description': 'user password'}}
+
+
+class LocalUserAuthPlugin(BasePasswordAuthPlugin):
     """User authentication using the cauth config file.
     """
 
@@ -53,7 +61,7 @@ class LocalUserAuthPlugin(base.AuthProtocolPlugin):
         raise base.UnauthenticatedError(err)
 
 
-class LDAPAuthPlugin(base.AuthProtocolPlugin):
+class LDAPAuthPlugin(BasePasswordAuthPlugin):
     """User authentication using an LDAP backend.
     """
 
@@ -93,7 +101,7 @@ class LDAPAuthPlugin(base.AuthProtocolPlugin):
         raise base.UnauthenticatedError('LDAP client search failed')
 
 
-class ManageSFAuthPlugin(base.AuthProtocolPlugin):
+class ManageSFAuthPlugin(BasePasswordAuthPlugin):
     """User authentication using the ManageSF local db backend.
     """
 
@@ -116,7 +124,7 @@ class ManageSFAuthPlugin(base.AuthProtocolPlugin):
                 'ssh_keys': [{'key': infos['sshkey']}, ]}
 
 
-class PasswordAuthPlugin(base.AuthProtocolPlugin):
+class PasswordAuthPlugin(BasePasswordAuthPlugin):
     """Generic password authentication, using all the specific plugins.
     """
 
