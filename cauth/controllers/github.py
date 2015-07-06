@@ -72,6 +72,7 @@ class GithubController(object):
     def callback(self, **kwargs):
         auth_context = kwargs
         auth_context['response'] = kwargs
+        auth_context['calling_back'] = True
         try:
             # Verify the state previously put in the db
             state = auth_context.get('state', None)
@@ -79,7 +80,8 @@ class GithubController(object):
             if not back:
                 err = 'GITHUB callback called with an unknown state.'
                 raise base.UnauthenticatedError(err)
-            valid_user = self.auth_plugin(**auth_context)
+            auth_context['back'] = back
+            valid_user = self.auth_plugin.authenticate(**auth_context)
         except base.UnauthenticatedError as e:
             response.status = 401
             return render('login.html',

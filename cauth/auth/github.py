@@ -100,16 +100,16 @@ class GithubAuthPlugin(BaseGithubAuthPlugin):
         return resp
 
     def authenticate(self, **auth_context):
-        if 'back' and 'response' in auth_context:
-            back = auth_context['back']
-            response = auth_context['response']
-            self.redirect(back, response)
-        else:
+        if auth_context.get('calling_back', False):
             state = auth_context.get('state', None)
             code = auth_context.get('code', None)
             error = auth_context.get('error', None)
             error_description = auth_context.get('error_description', None)
             return self._authenticate(state, code, error, error_description)
+        else:
+            back = auth_context['back']
+            response = auth_context['response']
+            self.redirect(back, response)
 
     def redirect(self, back, response):
         """Send the user to the Github auth page"""

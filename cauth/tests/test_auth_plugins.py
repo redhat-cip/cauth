@@ -308,7 +308,8 @@ class TestGithubAuthPlugin(BaseTestAuthPlugin):
     def test_callback(self):
         """Test successful callback from Github"""
         auth_context = {'state': 'test_state',
-                        'code': 'user6_code', }
+                        'code': 'user6_code',
+                        'calling_back': True}
         expected = {'login': 'user6',
                     'email': 'user6@tests.dom',
                     'name': 'Demo user6',
@@ -322,13 +323,15 @@ class TestGithubAuthPlugin(BaseTestAuthPlugin):
     def test_failed_auth(self):
         """Test Github auth failures"""
         auth_context = {'state': 'test_state',
-                        'code': 'OMGHAX', }
+                        'code': 'OMGHAX',
+                        'calling_back': True}
         with httmock.HTTMock(githubmock_request):
             with self.assertRaises(base.UnauthenticatedError):
                 self.driver.authenticate(**auth_context)
         with self.assertRaises(base.UnauthenticatedError):
             auth_context = {'error': 'OMG',
-                            'error_description': 'No luck'}
+                            'error_description': 'No luck',
+                            'calling_back': True}
             self.driver.authenticate(**auth_context)
 
 
