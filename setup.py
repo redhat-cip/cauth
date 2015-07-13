@@ -56,7 +56,8 @@ setup(
             ('GithubPersonalAccessToken = '
              'cauth.auth.github:GithubPersonalAccessTokenAuthPlugin'),
             ('Github = cauth.auth.github:GithubAuthPlugin'),
-            ('Password = cauth.auth.password:PasswordAuthPlugin')
+            ('Password = cauth.auth.password:PasswordAuthPlugin'),
+            ('OpenID = cauth.auth.openid:OpenIDAuthPlugin')
         ],
         'cauth.service': [
             'gerrit = cauth.service.gerrit:GerritServicePlugin',

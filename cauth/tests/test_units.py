@@ -242,5 +242,6 @@ class TestCauthApp(FunctionalTest):
                          response['service']['name'])
         self.assertEqual(set(['Password',
                               'Github',
-                              'GithubPersonalAccessToken']),
+                              'GithubPersonalAccessToken',
+                              'OpenID']),
                          set(response['service']['auth_methods']))

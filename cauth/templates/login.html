@@ -32,5 +32,10 @@
             <input type="hidden" name="back" value="${back}">
         Or <button type="submit">Login via Github</button>
         </form>
+        <form method="post" action="/auth/login/" target="_top">
+            <input type="hidden" name="method" value="OpenID">
+            <input type="hidden" name="back" value="${back}">
+        Or <button type="submit">Login via OpenID</button>
+        </form>
     </body>
 </html>

@@ -7,7 +7,7 @@ Authentication endpoint
 -----------------------
 
 cauth exposes a unique authentication endpoint for clients, at "/login". The
-authentication parameters must be passed to it as a JSON encoded payload. The
+authentication parameters can be passed to it as a JSON encoded payload or as a form query. The
 contents are dependent on the chosen authentication method.
 
 Example:
@@ -177,3 +177,38 @@ In the cauth config.py file, add the following section:
     },
    }
 
+OpenID
+------
+
+This authentication method lets the user authenticate herself through an OpenID
+provider specified in the configuration of cauth.
+The user is expected to share her nickname, e-mail address and full name with
+cauth (as prompted by the OpenID provider)
+
+JSON Payload
+............
+
+..code-block: JSON
+
+  {"method": "OpenID",
+   "back": "callback/url",
+   "args": {}
+  }
+
+Configuration
+.............
+
+In the cauth config.py file, add the following section:
+
+.. code-block:: python
+
+   auth = {
+    'openid': {
+        'auth_url':  'https://your.openid.provider/url',
+        'redirect_uri': '/login/openid/callback',
+    },
+   }
+
+*redirect_uri* will depend on how cauth is served in your configuration; this is
+the url (minus the host) where the openid provider must redirect a user after a
+successful authentication.

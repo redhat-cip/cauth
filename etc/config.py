@@ -74,6 +74,10 @@ auth = {
             "mail": "user@tests.dom",
             "password": "password",
         },
+    },
+    'openid': {
+        'auth_url': 'https://login.launchpad.net/+openid',
+        'redirect_uri': '/auth/login/openid/callback'
     }
 }
 

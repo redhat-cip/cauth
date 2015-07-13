@@ -34,6 +34,40 @@ class FakeResponse():
         return self._json
 
 
+openid_identity = {
+    'openid.ax.type.LastName': 'http://schema.openid.net/namePerson/last',
+    'openid.ax.count.FirstName': '0',
+    'back': '/',
+    'openid.ns.sreg': 'http://openid.net/sreg/1.0',
+    'openid.ax.type.Alias': 'http://schema.openid.net/namePerson/friendly',
+    'openid.signed': 'assoc_handle,ax.count.Alias,'
+                     'ax.count.Email,ax.count.FirstName,ax.count.LastName,'
+                     'ax.mode,ax.type.Alias,ax.type.Email,'
+                     'ax.type.FirstName,ax.type.LastName,'
+                     'claimed_id,identity,mode,ns,ns.ax,ns.sreg,'
+                     'op_endpoint,response_nonce,return_to,'
+                     'signed,sreg.email,sreg.fullname,sreg.nickname',
+    'openid.sreg.email': 'testy@test.com',
+    'openid.op_endpoint': 'https://login.launchpad.net/+openid',
+    'openid.ax.type.FirstName': 'http://schema.openid.net/namePerson/first',
+    'openid.response_nonce': '2015-07-15T09:46:00Z6laRav',
+    'openid.ax.count.Email': '0',
+    'openid.identity': 'https://login.launchpad.net/+id/fpNJp4h',
+    'openid.return_to': '/auth/login/openid/callback?back=/',
+    'openid.ax.mode': 'fetch_response',
+    'openid.claimed_id': 'https://login.launchpad.net/+id/fpNJp4h',
+    'openid.ax.count.Alias': '0',
+    'openid.sreg.nickname': 'NickyNicky',
+    'openid.ns.ax': 'http://openid.net/srv/ax/1.0',
+    'openid.mode': 'id_res',
+    'openid.sig': 'QYrDOEWmv8zKxwTdzOxyhJHFexM=',
+    'openid.ns': 'http://specs.openid.net/auth/2.0',
+    'openid.sreg.fullname': 'Nick McTesty',
+    'openid.ax.type.Email': 'http://schema.openid.net/contact/email',
+    'openid.assoc_handle': '{HMAC-SHA1}{55a62bd8}{3/uG3g==}',
+    'openid.ax.count.LastName': '0'}
+
+
 @httmock.urlmatch(netloc=r'(.*\.)?github\.com$')
 def githubmock_request(url, request):
     users = {
@@ -130,7 +164,10 @@ class dummy_conf():
                        "password": crypt.crypt("userpass",
                                                "$6$EFeaxATWohJ")}},
                      'localdb':
-                     {"managesf_url": "http://tests.dom", }, }
+                     {"managesf_url": "http://tests.dom", },
+                     'openid':
+                     {"redirect_uri": "auth/login/openid/callback",
+                      'auth_url': 'https://my.openid.provider/+openid', }, }
         self.sqlalchemy = {'url': 'sqlite:///%s' % tempfile.mkstemp()[1],
                            'echo': False,
                            'encoding': 'utf-8',

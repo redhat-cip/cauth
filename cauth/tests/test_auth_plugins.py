@@ -26,6 +26,7 @@ import stevedore
 
 from cauth.auth import base
 from cauth.tests.common import FakeResponse, githubmock_request
+from cauth.tests.common import openid_identity
 
 
 SQL = {'url': 'sqlite:///%s' % tempfile.mkstemp()[1],
@@ -47,6 +48,12 @@ TEST_GITHUB_AUTH = {
     'redirect_uri': 'https://github/redirect/url',
     'client_id': 'your_github_app_id',
     'client_secret': 'your_github_app_secret',
+}
+
+
+TEST_OPENID_AUTH = {
+    'auth_url': 'https://my.openid.provider/+openid',
+    'redirect_uri': '/auth/login/openid/callback',
 }
 
 
@@ -333,6 +340,64 @@ class TestGithubAuthPlugin(BaseTestAuthPlugin):
                             'error_description': 'No luck',
                             'calling_back': True}
             self.driver.authenticate(**auth_context)
+
+
+class TestOpenIDAuthPlugin(BaseTestAuthPlugin):
+    def setUp(self):
+        conf = {'auth': {'openid': TEST_OPENID_AUTH, }, }
+        self.driver = self._load_auth_plugin('OpenID', conf)
+
+    def test_redirect(self):
+        """Test that user is redirected"""
+        response = MagicMock()
+        auth_context = {'back': '/',
+                        'response': response}
+        with patch('cauth.auth.openid.request') as r:
+            r.host_url = 'tests.dom'
+            self.driver.authenticate(**auth_context)
+            self.assertEqual(302, response.status_code)
+
+    def test_verify_data(self):
+        """Validate the data from the OpenID provider"""
+        with patch('requests.post') as p:
+            p.return_value = FakeResponse(200,
+                                          content="is_valid:true ns:http")
+            self.assertEqual(None,
+                             self.driver.verify_data(openid_identity))
+            with self.assertRaises(base.UnauthenticatedError):
+                o = openid_identity.copy()
+                del o['openid.sreg.nickname']
+                self.driver.verify_data(o)
+        with patch('requests.post') as p:
+            p.return_value = FakeResponse(401,
+                                          content="")
+            with self.assertRaises(base.UnauthenticatedError):
+                self.driver.verify_data(openid_identity)
+        with patch('requests.post') as p:
+            p.return_value = FakeResponse(200,
+                                          content="is_valid:false ns:http")
+            with self.assertRaises(base.UnauthenticatedError):
+                self.driver.verify_data(openid_identity)
+
+    def test_callback(self):
+        """Test successful callback from OpenID provider"""
+        auth_context = openid_identity.copy()
+        auth_context['response'] = MagicMock()
+        auth_context['back'] = '/'
+        expected = {'login': 'NickyNicky',
+                    'email': 'testy@test.com',
+                    'name': 'Nick McTesty',
+                    'ssh_keys': []}
+        with patch('requests.post') as p:
+            p.return_value = FakeResponse(200,
+                                          content="is_valid:true ns:http")
+            with patch('cauth.auth.openid.request') as r:
+                r.host_url = 'tests.dom'
+                authenticated = self.driver._authenticate(**auth_context)
+                self.assertEqual(expected,
+                                 authenticated,
+                                 "Got %r, expected %r" % (authenticated,
+                                                          expected))
 
 
 class TestGithubPersonalAccessTokenAuthPlugin(BaseTestAuthPlugin):
