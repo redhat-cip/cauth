@@ -48,7 +48,7 @@ setup(
 
     install_requires=INSTALL_REQUIRES,
     url='http://softwarefactory.enovance.com/r/gitweb?p=cauth.git;a=summary',
-    download_url='https://github.com/enovance/cauth/tarball/%s' % VERSION,
+    download_url='https://github.com/redhat-cip/cauth/tarball/%s' % VERSION,
     keywords=['software factory', 'SSO', 'Authentication'],
 
     entry_points={
