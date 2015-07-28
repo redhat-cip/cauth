@@ -1,41 +1,57 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
     <head>
         <meta charset="utf-8">
-        <title>Sample login page</title>
+        <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
     </head>
     <body>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <h3 class="panel-title">Login with cauth</h3>
-            </div>
-            <h5>${message}</h5>
-            <div class="panel-body">
-                <form method="post" action="/auth/login/" target="_top">
-                    <div>
-                        <input type="hidden" name="method" value="Password">
-                        <label for="username">Username</label>
-                        <input name="username" id="username" type="text" value="" placeholder="Username" required autofocus>
+        <br />
+        <div class="container">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Login with cauth</h3>
                     </div>
-                    <div>
-                        <label for="username">Password</label>
-                        <input name="password" id="password" type="password" placeholder="Password" required>
+                    <div class="panel-body">
+                        <h5>${message}</h5>
+                        % if auth_methods:
+                            % if 'users' in auth_methods or 'localdb' in auth_methods or 'ldap' in auth_methods:
+                            <form method="post" action="/auth/login/" target="_top">
+                                <input type="hidden" name="method" value="Password">
+                                <input type="hidden" name="back" value="${back}">
+                                <div class="form-group">
+                                    <input name="username" id="username" type="text" value="" placeholder="Username" required autofocus class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <input name="password" id="password" type="password" placeholder="Password" required class="form-control">
+                                </div>
+                                <div class="form-group text-center">
+                                    <button type="submit" class="btn btn-primary">Internal Login<i class="fa fa-sign-in fa-fw"></i></button>
+                                </div>
+                            </form>
+                            % endif
+                            % if 'github' in auth_methods:
+                            <form method="post" action="/auth/login/" target="_top">
+                                <div class="form-group text-center">
+                                    <input type="hidden" name="method" value="Github">
+                                    <input type="hidden" name="back" value="${back}">
+                                    <button type="submit" class="btn btn-default">Login via Github</button>
+                                </div>
+                            </form>
+                            % endif
+                            % if 'openid' in auth_methods:
+                            <form method="post" action="/auth/login/" target="_top">
+                                <div class="form-group text-center">
+                                    <input type="hidden" name="method" value="OpenID">
+                                    <input type="hidden" name="back" value="${back}">
+                                    <button type="submit" class="btn btn-default">Login via OpenID</button>
+                                </div>
+                            </form>
+                            % endif
+                        % endif
                     </div>
-                    <input type="hidden" name="back" value="${back}">
-
-                    <button type="submit">Log in</button>
-                </form>
+                </div>
             </div>
         </div>
-        <form method="post" action="/auth/login/" target="_top">
-            <input type="hidden" name="method" value="Github">
-            <input type="hidden" name="back" value="${back}">
-        Or <button type="submit">Login via Github</button>
-        </form>
-        <form method="post" action="/auth/login/" target="_top">
-            <input type="hidden" name="method" value="OpenID">
-            <input type="hidden" name="back" value="${back}">
-        Or <button type="submit">Login via OpenID</button>
-        </form>
     </body>
 </html>

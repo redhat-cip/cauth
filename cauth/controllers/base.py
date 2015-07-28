@@ -93,4 +93,5 @@ class BaseLoginController(RestController):
     def get(self, **kwargs):
         back = kwargs.get('back', '/auth/logout')
         logger.info('Client requests the login page.')
-        return dict(back=back, message='')
+        auth_methods = [k for k, v in conf.get('auth', {})]
+        return dict(back=back, message='', auth_methods=auth_methods)

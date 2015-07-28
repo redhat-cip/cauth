@@ -44,9 +44,11 @@ class OpenIDController(object):
             valid_user = self.auth_plugin.authenticate(**auth_context)
         except base.UnauthenticatedError as e:
             response.status = 401
+            auth_methods = [k for k, v in conf.get('auth', {})]
             return render('login.html',
                           dict(back=back,
-                               message='Authorization failure: %s' % e))
+                               message='Authorization failure: %s' % e,
+                               auth_methods=auth_methods))
         logger.info(
             '%s (%s) successfully authenticated with OpenID.'
             % (valid_user['login'], valid_user['email']))

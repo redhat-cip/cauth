@@ -31,7 +31,8 @@ class LogoutController(RestController):
     @expose(template='login.html')
     def get(self, **kwargs):
         response.delete_cookie('auth_pubtkt', domain=conf.app.cookie_domain)
-        return dict(back='/', message=LOGOUT_MSG)
+        auth_methods = [k for k, v in conf.get('auth', {})]
+        return dict(back='/', message=LOGOUT_MSG, auth_methods=auth_methods)
 
 
 class RootController(object):
