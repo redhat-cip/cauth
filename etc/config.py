@@ -78,6 +78,9 @@ auth = {
     'openid': {
         'auth_url': 'https://login.launchpad.net/+openid',
         'redirect_uri': '/auth/login/openid/callback'
+    },
+    'keystone': {
+        'auth_url': 'http://keystone.server:5000',
     }
 }
 

@@ -22,6 +22,10 @@ import requests
 import urllib
 
 from basicauth import encode
+try:
+    import keystoneclient as kc
+except ImportError:
+    kc = None
 
 from cauth.auth import base
 
@@ -124,6 +128,47 @@ class ManageSFAuthPlugin(BasePasswordAuthPlugin):
                 'ssh_keys': [{'key': infos['sshkey']}, ]}
 
 
+class KeystoneAuthPlugin(BasePasswordAuthPlugin):
+    """User authentication using the ManageSF local db backend.
+    """
+
+    _config_section = "keystone"
+
+    def authenticate(self, **auth_context):
+        """Authentication against a keystone server. We simply try to fetch an
+        unscoped token."""
+        username = auth_context.get('username', '')
+        password = auth_context.get('password', '')
+        auth_url = self.conf['auth_url']
+        if kc:
+            try:
+                client = kc.client.Client(auth_url=auth_url,
+                                          username=username,
+                                          password=password)
+                if client.authenticate():
+                    # TODO(mhu) keystone can store a user's e-mail, but with
+                    # default keystone policies this info can only be fetched
+                    # by an admin account. Either patch keystone to allow
+                    # a user to fetch her own info, or add admin auth to this
+                    # plugin in order to fetch the e-mail.
+                    return {'login': username,
+                            'email': '',
+                            'name': username,
+                            'ssh_keys': []}
+            except kc.exceptions.Unauthorized:
+                msg = ("keystone authentication failed: "
+                       "Invalid user or password")
+                raise base.UnauthenticatedError(msg)
+            except Exception as e:
+                raise base.UnauthenticatedError("Unknown error: %s" % e)
+        else:
+            msg = "keystone authentication not available on this server"
+            raise base.UnauthenticatedError(msg)
+        # every other case
+        msg = ("keystone authentication failed")
+        raise base.UnauthenticatedError(msg)
+
+
 class PasswordAuthPlugin(BasePasswordAuthPlugin):
     """Generic password authentication, using all the specific plugins.
     """
@@ -132,9 +177,12 @@ class PasswordAuthPlugin(BasePasswordAuthPlugin):
 
     def __init__(self, conf):
         self.plugins = []
-        for plugin in (LocalUserAuthPlugin,
-                       LDAPAuthPlugin,
-                       ManageSFAuthPlugin):
+        plugins_list = [LocalUserAuthPlugin,
+                        LDAPAuthPlugin,
+                        ManageSFAuthPlugin]
+        if kc:
+            plugins_list.append(KeystoneAuthPlugin)
+        for plugin in plugins_list:
             try:
                 self.plugins.append(plugin(conf))
             except base.AuthProtocolNotAvailableError:

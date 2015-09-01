@@ -19,6 +19,7 @@ import ldap
 import tempfile
 from unittest import TestCase
 
+import keystoneclient.exceptions as k_exc
 import httmock
 from mock import patch, MagicMock
 from pecan import configuration
@@ -71,6 +72,11 @@ TEST_LOCALDB_AUTH = {
 }
 
 
+TEST_KEYSTONE_AUTH = {
+    'auth_url': 'http://keystone.server:5000/v2.0',
+}
+
+
 class BaseTestAuthPlugin(TestCase):
     def _load_auth_plugin(self, name, conf):
         return stevedore.DriverManager(
@@ -98,7 +104,8 @@ class TestDrivers(BaseTestAuthPlugin):
             'ldap': TEST_LDAP_AUTH,
             'github': TEST_GITHUB_AUTH,
             'localdb': TEST_LOCALDB_AUTH,
-            'users': TEST_USERS_AUTH, }, }
+            'users': TEST_USERS_AUTH,
+            'keystone': TEST_KEYSTONE_AUTH, }, }
         for plugin in ('GithubPersonalAccessToken',
                        'Github',
                        'Password'):
@@ -174,6 +181,40 @@ class TestPasswordAuthPlugin(BaseTestAuthPlugin):
             with self.assertRaises(base.UnauthenticatedError):
                 driver.authenticate(**auth_context)
 
+    def test_keystone_auth(self):
+        """Test password authentication with keystone only"""
+        conf = {'auth': {'keystone': TEST_KEYSTONE_AUTH, }, }
+        driver = self._load_auth_plugin('Password', conf)
+        # assert the driver has loaded only one plugin
+        self.assertEqual(1,
+                         len(driver.plugins))
+        self.assertEqual('KeystoneAuthPlugin',
+                         driver.plugins[0].__class__.__name__)
+        # test valid user
+        auth_context = {'username': 'openstack',
+                        'password': 'liberty'}
+        expected = {'login': 'openstack',
+                    'email': '',
+                    'name': 'openstack',
+                    'ssh_keys': [], }
+        with patch('keystoneclient.client.Client') as c:
+            client = MagicMock()
+            client.authenticate.return_value = True
+            c.return_value = client
+            authenticated = driver.authenticate(**auth_context)
+            self.assertEqual(expected,
+                             authenticated,
+                             "Got %r" % authenticated)
+        # test wrong user
+        auth_context = {'username': 'nope',
+                        'password': 'userpass'}
+        with patch('keystoneclient.client.Client') as c:
+            client = MagicMock()
+            client.authenticate.side_effect = k_exc.Unauthorized
+            c.return_value = client
+            with self.assertRaises(base.UnauthenticatedError):
+                driver.authenticate(**auth_context)
+
     def test_ldap_auth(self):
         """Test password authentication against LDAP backend only"""
         conf = {'auth': {'ldap': TEST_LDAP_AUTH, }, }
@@ -216,10 +257,11 @@ class TestPasswordAuthPlugin(BaseTestAuthPlugin):
         """Test password authentication with every backend activated"""
         conf = {'auth': {'ldap': TEST_LDAP_AUTH,
                          'localdb': TEST_LOCALDB_AUTH,
-                         'users': TEST_USERS_AUTH, }, }
+                         'users': TEST_USERS_AUTH,
+                         'keystone': TEST_KEYSTONE_AUTH, }, }
         driver = self._load_auth_plugin('Password', conf)
         # assert the driver has loaded every plugin
-        self.assertEqual(3,
+        self.assertEqual(4,
                          len(driver.plugins))
         # test wrong user
         auth_context = {'username': 'nope',
