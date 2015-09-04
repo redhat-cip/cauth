@@ -1,6 +1,6 @@
 -e git+https://github.com/redhat-cip/pysflib.git#egg=pysflib
 basicauth==0.3
-pecan==1.0.1
+pecan==1.0.2
 mock==1.3.0
 mockldap==0.2.5
 httmock==1.2.3
