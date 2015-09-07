@@ -1,0 +1,489 @@
+Changelog
+=========
+
+0.5.0 (2015-08-13)
+------------------
+
+- Pin requirements to the latest working versions. [Matthieu Huin]
+
+- Improve default login page. [Christian Schwede]
+
+- OpenID authentication. [Matthieu Huin]
+
+  Add a plugin allowing authentication via the OpenID protocol.
+  Authentication occurs against one provider that must be specified
+  in the configuration file.
+
+- Change RCIP git repos. [Matthieu Huin]
+
+- Fix app crashing at startup if some auth methods are not configured.
+  [Matthieu Huin]
+
+0.4.0 (2015-07-02)
+------------------
+
+- Unified login endpoint. [Matthieu Huin]
+
+  All authentication attempts, regardless of the chosen method, can
+  now be done against the /login endpoint.
+  Auth data is sent in the form of a JSON payload, which allows the
+  client to specify which auth method to use.
+  Old-style endpoints are still up at this point to ensure compatibility.
+
+- Service plugins. [Matthieu Huin]
+
+  This patch introduces service components under a plugin architecture.
+
+  Supported components:
+
+  * Gerrit
+  * Redmine
+
+  The plugins currently support the registration of a user on her
+  first login.
+
+- Fix github auth. [Matthieu Huin]
+
+- Introspection REST API endpoint. [Matthieu Huin]
+
+  The server advertises the library version and the available auth
+  protocols. Something like:
+
+  GET /about/
+
+  {'service':
+   {'name': 'cauth',
+    'version': 'x.y.z',
+    'auth_methods': ['Password', 'Github']}
+  }
+
+- Move the symlink for app.wsgi. [Monty Taylor]
+
+  etc/app.wsgi was a dangling symlink. Fix it.
+
+- Authentication plugins. [Matthieu Huin]
+
+  This patch introduces authentication protocols under a plugin
+  architecture. The exposed plugins are:
+
+  * Github oAuth authentication
+  * Github Personal Access Token authentication
+  * Password authentication
+
+  The password authentication supports the following backends:
+
+  * hard-coded users in cauth's config file
+  * LDAP
+  * ManageSF
+
+- Improve doc. [Matthieu Huin]
+
+- Refactor cauth. [Christian Schwede]
+
+  - Moved most of the code from the root controller and splitted the functionality
+    into separate methods and classes
+
+  - Added a BaseLogin controller and moved authentication code to separate
+    methods. Authentication methods can be added to the class, and are then
+    executed until either one authentication succeeds or no method is left.
+    Basically there are two ways to add a new authentication backend now:
+
+    1. Password-based: add a new method and register it in the base controller
+    2. External authentication: add a new controller to the BaseLogin namespace,
+       for example to use GitHub authentication
+
+  - Modified tests to use the changed namespace
+
+- Prepare lib for pypi. [Matthieu Huin]
+
+0.2.0 (2015-06-01)
+------------------
+
+- Fix wrong json conversion call, sshkey format. [Matthieu Huin]
+
+- Fix broken bind path for localdb auth. [Matthieu Huin]
+
+- Add support for manageSF localdb auth. [Matthieu Huin]
+
+0.1 (2015-05-07)
+----------------
+
+- Prepare codebase for externalization. [Matthieu Huin]
+
+  Add a succint README and unit testing
+
+- ManageSF commit. [user1]
+
+- Refactor topmenu. [Christian Schwede]
+
+  Currently the webinterface consists of the topmenu with an iframe to embedd the
+  various applications. This has some drawbacks.
+
+  - requires a customized Gerrit build
+  - a lot of redirects and workarounds to make links working
+  - custom functions to prevent nested topmenus
+  - URLs shown in the browser are not correct
+
+  A better option is to include the topmenu into the applications itself. In case
+  of Gerrit this has to be done by some Javascript, because simply adding this by
+  an Apache filter is not enough - the Gerrit UI itself is built in the browser.
+
+  This prototype adds the topmenu directly to Gerrit after the page is loaded.
+  Gerrit itself is now the main page, and no longer running in an iframe. This
+  makes it also possible to use the default Gerrit built shipped by Google.
+
+  The topmenu itself is now an iframe; directly embedding HTML+CSS code into the
+  applications results in changing designs between the applications, because the
+  CSS markup between the applications and the topmenu affects each other.
+
+- Add authentication with Github API key. [Matthieu Huin]
+
+  Allow a user to authenticate with a Github API key; covers client
+  and server sides.
+
+- Fix the login error. [George Peristerakis]
+
+  Fix the bug #24
+
+- Fix github redirect URL if enforce_ssl=false. [Christian Schwede]
+
+  Also catch a possible ConnectionErrors when connecting to github.com, avoiding 500
+  errors reported back to the user. This happens for example if the LXC container
+  host disabled NAT forwarding.
+
+- Use authenticated request to fetch organization membership. [Christian
+  Schwede]
+
+- Remove fixed URL prefixes. [Christian Schwede]
+
+- Managesf: use URLs instead of hostnames. [Christian Schwede]
+
+  Using fixed "http://" prefixes and default port combinations makes it quite
+  difficult to use a "https://" prefixes without breaking anything.
+
+  Let's use URLs instead of hostnames, ports and internal hard-coded prefixes.
+
+- Handle empty user email from Github. [Fabien Boucher]
+
+  When fetching user detail in the callback via
+  https://api.github.com/user an empty email field can
+  be returned. This patch fix the test about the mail field
+  and compute a default email to the user.
+
+  This patch fix some log message too.
+
+- Change example.com to tests.dom. [Fabien Boucher]
+
+  Sanitize example.com in tests and only use
+  tests.dom as example domain.
+
+- Fix requirement install (session argument) + others. [Fabien Boucher]
+
+  - Need to avoid the usage of this really old virtualenv
+    version 1.10.1. (Installed by sfstack)
+    sudo pip install -U tox virtualenv
+  - Use sorted in unittest at some place because
+    after the update of tox and virtualenv order returned
+    in tests changes. So consolidate tests.
+  - Fix missing file for new edeploy version
+  - Fix jenkins-jobs usage for new PermissionDenied on .cache directory
+
+  We need to update our slaves, sfstack code and SF doc.
+
+- Check authentication token on gateway. [Christian Schwede]
+
+  Now the Apache on the gateway always requires a valid SSO session. This fixes
+  the bug with the 406 error after the SSO cookie expired, because the gateway
+  Apache now directly redirects the user to the login page.
+
+  It also simplifies the logout - before this patch the logout process was quite
+  complicated: first a redirect was executed to Gerrits logout page. Gerrit
+  removed its own session cookie and redirected the user finally to the cauth
+  logout URL, removing the SSO cookie.  Now only the SSO cookie is removed.
+
+- Improved the redirection when successful login. [George Peristerakis]
+
+  If the login url parameter has a 'back' parameter, the redirection url
+  is filtered to relative path and made sure that the path begins with one
+  of the 5 components.
+
+- Add a basic dashboard. [Christian Schwede]
+
+  This adds a basic dashboard using AngularJS and the managesf REST API.
+  Currently listing, creating and deleting projects is supported and the open
+  reviews and bugs are shown.
+
+  An additional method was added to managesf to GET project infos including open
+  issues and reviews. The data for this call is internally cached for 15 seconds
+  because this triggers at least four internal REST API calls.
+
+- Restrict access to SF based on Github organization membership.
+  [Christian Schwede]
+
+  Also changed import of the requests module.
+
+- Refactor Github controller and tests. [Christian Schwede]
+
+  Remove the mocking parts in the Github controller and re-use them in
+  test_unit.py. Also refactor the tests, because they sometimes only tested if the
+  mock was working.
+
+  The functional test "test_userdata_github" has been removed to. It was using a
+  password-based authentication, that was only possible because of the mocked out
+  Github backend. This is a misleading test because we never ask for password and
+  username from Github users.
+
+- Remove LDAP mocking in cauth and add local user authentication.
+  [Christian Schwede]
+
+  This patches modifies the authentication and makes it possible to define
+  multiple local users independent from all other authentication sources.
+  Passwords are stored hashed and salted on the managesf node.
+
+  By default only the admin user is configured, and only if the top_domain equals
+  to tests.dom additional users are configured (for testing).
+
+- Make the adminuser independent from LDAP and Github. [Christian
+  Schwede]
+
+  SF needs an admin user during deployment to create the config repository (for
+  example). However, currently this is only possible with a configured LDAP
+  backend or the built-in dummy LDAP, that is only available on domain tests.dom.
+
+  This patches modifies the authentication and allows to configure another
+  admin user that is independent from all other authentication sources.
+
+  The admin password is stored hashed and salted on the managesf node.
+
+- Update login page and refactor static HTML/CSS/JS files. [Christian
+  Schwede]
+
+  Links on the login page are configurable using sfconfig.yaml.
+
+  Some additional refactoring has been done to improve handling of static
+  files (HTML/CSS/JS). External frameworks (for example CSS Bootstrap,
+  JQuery, Font Awesome) should be included in the eDeploy roles and not
+  provided by Puppet.
+
+  Tests have been updated too, because they only checked for a 200 OK
+  response. This resulted in false positives and didn't detect missing
+  files.
+
+- Provide pysflib with RedmineUtils. [Fabien Boucher]
+
+  - Introduce usage of python-redmine lib instead
+    of re-writting the wheel.
+  - Install pysflib on the install-server role
+  - Install pysflib on the softwarefactory role
+  - Modify test_01,08,10,11 to use the new pysflib for Redmine
+    API calls.
+  - Remove RedmineUtil class from utils.py file of
+    functional tests.
+  - Use pysflib for managesf Redmine API calls
+  - Adapt managesf redmine controler tests
+  - Gerrit hooks now uses pysflib
+  - Cauth userdetail now uses pysflib
+  - Fix cauth requirements file not used
+
+- Limit Github scope. [Christian Schwede]
+
+  We don't need full write access to the users Github account. Reading the
+  email address and public keys is enough (includes the name of the user
+  too).
+
+  read:org provides access to the users organizations, and this can be
+  used later to limit access to SF (for example, only allowing eNovance
+  users access to SF).
+
+  See also: https://developer.github.com/v3/oauth/#scopes
+
+- Store test user data in config.py. [Christian Schwede]
+
+  The other tests users are already stored in config.py, let's store these
+  users there too to keep our code clean.
+
+- Fix static sqlite path for cauth during tests. [Fabien Boucher]
+
+  - This fix allow the tests to be run by different users.
+    without raising errors.
+
+- Improve service Logout SSO. [Fabien Boucher]
+
+  This patch fixes a problem introduces during the refactoring
+  of cauth. The previous patch simplify to much the logout
+  mechanism by only unset the auth_pubtkt cookie. But
+  Gerrit is still partialy connected.
+
+  We had we that patch an explicit logout on Gerrit when:
+  - a logout is requested from the topmenu
+  - a logout is requested from the redmine logout link
+
+  If the logout is requested from the inner Gerrit logout link
+  then the session on Gerrit is already closed, so no need
+  for the explicit logout on Gerrit.
+
+  Jenkins does not provide an inner logout link.
+
+- Fix bash8 errors. [Tristan Cacqueray]
+
+- Fix run_tests.sh for SF. [Fabien Boucher]
+
+  - Fix all current flake8 errors
+  - Add tox.ini to cauth. This allow to
+    run tests in virtualenv
+
+- Add unitests to cauth + Cleaning. [Fabien Boucher]
+
+  - Add unitests
+  - Add functional tests for the WSGI app (same
+    file as unittests)
+  - Simplify logout by removing service param
+  - Add error checking at github authorize request
+  - Add error checking at token request
+  - Add real logging
+  - Add copyright headers
+  - Fix softwarefactory.install to use the new requirements.txt file
+
+- Add functional test for Github oauth login. [anil.venkata]
+
+  Mock github rest APIs using httmock. When a request is made to github,
+  this library calls our mocked api, which processes the request and
+  send mock replies for the requests.
+  This mock server keeps user6 and user7 as github users, along with their
+  mail,surname,ssh_keys, oauth code and oauth token.
+  If the login is succesful, user will be created in gerrit & redmine like LDAP.
+
+  This mocked login will be only enabled for tests.dom domain and only when user
+  credentials are passed as a query string to github login url,
+  as this mocking is only required for testing.
+
+  Add a test which will login using github oauth(with github user user6),
+  test checks if login works and name, email and ssh keys are fetched and available in Gerrit & Redmine,
+  test also creates a project in gerrit and redmine using managesf, and checks
+  for the project in both redmine and gerrit.
+
+  Enabled Managesf cli tool to access cookie as a CLI option, and
+  skip get_cookie if cookie is alredy provided(and directly use it)
+
+  In tests/functional/__init__.py, no need to explicitly create
+  user, using create_gerrit_user, as assign_cookies already does that.
+
+- Fix double top menu. [Christian Schwede]
+
+  This fixes the double top menu entry when using LDAP and Github.
+  Redirect URI are limited to Gerrit, Jenkins and Redmine, no matter what
+  URI is given as back argument.
+
+  A second fix is now included in the page itself; if the page itself is
+  nested it will remove escape the top iframe.
+
+- Remove LDAP role and mock functional tests. [Christian Schwede]
+
+- Improve Redmine and Gerrit userdetails. [Christian Schwede]
+
+  - Apache on Gerrit got another proxy for requests to /api/
+  - Email and name from LDAP and Github are now configured in Redmine and Gerrit
+  - Public keys from Github are also configured in Gerrit
+  - Tests for Gerrit and LDAP have been added using the LDAP backend.
+    These requires another user (user5) that is not used in any other
+    test.
+
+- Escape frame for Github login. [Christian Schwede]
+
+  Login to Github doesn't work in the frame, so we need to escape the
+  frame first and after logging in use the top url '/' to get into the
+  frame again.
+
+- Pre-register user on redmine after oauth Github auth. [Fabien Boucher]
+
+  - This is a quick fix.
+  - This should be improved to handle the right email
+    addr of the user.
+  - This should also be improved by handling Gerrit
+    autoregistraion.
+
+- Remove redmine LDAP auth source. [Fabien Boucher]
+
+  The ldap sync plugin use informations from the LDAP auth source
+  to sync users. The user creations (in the redmine database) can
+  be done by the central authenticator. So this patch handles :
+
+  - Remove ldap_sync plugin
+  - Remove configured ldap auth source
+  - Cauth automatically fill user detail in redmine at
+    token creation.
+
+- Fixed a flaw in the auth server. In POST /auth/login, kwargs['back']
+  was accessed without checking if 'back' is in kwargs. This would have
+  given a chance for exploiters to crash the auth server. [Babu
+  Shanmugam]
+
+- Re-set ProxyPreserveHost to On. [fabien boucher]
+
+  - Setting ProxyPreserveHost to on tell apache to
+    use the provided Host header to build the ProxyPath
+    uris.
+  - Remove useless port specification in the gateway ProxyPass
+    rules.
+  - Avoid cauth and managesf app to be called by Virtualhost
+    Servername. Use WSGIScriptAlias instead.
+  - Completly avoid the use of managesf hostname in functional
+    test as well as auth hostname. Only use commonservices.
+
+- Redesign login form. [Christian Schwede]
+
+- Add topmenu for SF. [Christian Schwede]
+
+  The top menu is built using bootstrap and an iframe.
+  To get the iframe working a few modifications are required:
+
+  - build customized gerrit.war that doesn't escape iframe (see README how to
+    build gerrit; the required modification is located in
+    gerrit-gwtexpui/src/main/java/com/google/gwtexpui/user/client/UserAgent.java
+    and simply uncomments/removes code within
+
+      public static void assertNotInIFrame() {}
+
+    The built gerrit.war is now located in a public Swift container in
+    enocloud.
+
+  - use paths for all services (for example /jenkins/ instead of /); this
+    required some changes, for example urls.py of lodgeit
+  - add an apache proxy on the commonservices node that serves
+    the iframe and forwards requests to the correct nodes
+  - removed custom css and logo from gerrit
+  - and some more minor changes.
+
+  Etherpad and Paste service don't show the URL (due to the iframe); for
+  Etherpad URLs just use the second buttom from the right and for Paste use the
+  displayed links.
+
+  It is now also possible to add SSL to this Apache and restrict access to all
+  webservices because all requests are proxied.
+
+- Single sign-on and sign-off for the softwarefactory services. [Babu
+  Shanmugam]
+
+  The services which rely on the LDAP authentication such as redmine
+  and gerrit are authenticated via a cookie which is created by the
+  authentication service when a user logs in to any of the service.
+
+  When a service is launched it will redirect the user to the central
+  authentication service which validates the user's credentials against
+  an LDAP server or through github servers via OAUTH and sets a cookie
+  that would be visible across all the services that operate on the
+  same 'top domain'
+
+  Similarly, when user logs out of any of the service, the request will
+  be redirected to the central server which signs out from all the services
+  through a series of redirection thereby unsetting all the cookies.
+
+  Right now, the central authentication service is designed to run inside
+  the managesf node but with its own hostname alias.
+
+  The functional tests are updated to absorb cookies based authentication.
+
+  Through this commit, there is no way we allow an anonymous user to access the
+  softwarefactory services.
+
+
