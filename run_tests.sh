@@ -31,9 +31,12 @@ echo
 
 echo "cauth tests"
 echo "~~~~~~~~~~~~~"
-env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl"
-(rm -Rf .tox; tox)
+(rm -Rf .tox;SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl"  tox)
 CAUTH_ERRORS=$?
 echo
+
+echo "tox tests ran with the following env:"
+source .tox/py27/bin/activate && pip freeze
+deactivate
 
 exit $[${FLAKE8_ERRORS} + ${BASH8_ERRORS} + ${CAUTH_ERRORS}];
