@@ -27,7 +27,7 @@ except:
     pass
 
 
-VERSION = '0.5.0'
+VERSION = '0.6.0'
 
 
 # use requirements.txt for install
