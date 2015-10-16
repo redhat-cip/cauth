@@ -27,7 +27,7 @@ except:
     pass
 
 
-VERSION = '0.7.0'
+VERSION = '0.8.0'
 
 
 # use requirements.txt for install
