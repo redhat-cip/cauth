@@ -15,6 +15,7 @@
 import json
 from unittest import TestCase
 
+from contextlib import nested
 from mock import patch, Mock
 from stevedore import driver
 
@@ -118,3 +119,32 @@ class TestGerritPlugin(TestCase):
                                    'name': 'John Doe',
                                    'ssh_keys': []})
             self.assertEqual(False, ger.add_account_as_external.called)
+
+    def test_create_managesf_user(self):
+        msf = driver.DriverManager(
+            namespace='cauth.service',
+            name='managesf',
+            invoke_on_load=True,
+            invoke_args=(self.conf,)).driver
+        patches = [patch('cauth.service.managesf.requests.post'),
+                   patch('cauth.service.managesf.create_ticket'),
+                   patch('cauth.service.managesf.orig_conf'), ]
+        with nested(*patches) as (post, create_ticket, p_conf):
+            p_conf.app = self.conf.app
+            create_ticket.return_value = 'MAGICCOOKIE'
+            msf.register_new_user({'login': 'john',
+                                   'email': 'john@tests.dom',
+                                   'name': 'John Doe',
+                                   'ssh_keys': []})
+            url = "%s/manage/services_users/" % self.conf.managesf['url']
+            data = json.dumps({"full_name": "John Doe",
+                               "email": "john@tests.dom",
+                               "username": "john",
+                               "ssh_keys": []},
+                              default=lambda o: o.__dict__)
+            headers = {"Content-type": "application/json"}
+            cookie = {'auth_pubtkt': 'MAGICCOOKIE'}
+            post.assert_called_with(url,
+                                    data=data,
+                                    headers=headers,
+                                    cookies=cookie)

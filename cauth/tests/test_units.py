@@ -52,8 +52,7 @@ class FunctionalTest(TestCase):
     def setUp(self):
         c = dummy_conf()
         gen_rsa_key()
-        config = {'redmine': c.redmine,
-                  'gerrit': c.gerrit,
+        config = {'managesf': c.managesf,
                   'app': c.app,
                   'auth': c.auth,
                   'services': c.services,

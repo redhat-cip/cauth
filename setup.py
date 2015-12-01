@@ -62,6 +62,7 @@ setup(
         'cauth.service': [
             'gerrit = cauth.service.gerrit:GerritServicePlugin',
             'redmine = cauth.service.redmine:RedmineServicePlugin',
+            'managesf = cauth.service.managesf:ManageSFServicePlugin',
         ]
     },
 )

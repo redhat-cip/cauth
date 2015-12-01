@@ -100,6 +100,8 @@ sqlalchemy = {
     'encoding': 'utf-8'
 }
 
+services = ['managesf', ]
+
 redmine = {
     'apihost': 'redmine_api_host',
     'apiurl': '',
@@ -114,4 +116,8 @@ gerrit = {
     'db_name': 'gerrit_mysql_db',
     'db_user': 'gerrit_mysql_username',
     'db_password': 'gerrit_sql_pwd'
+}
+
+managesf = {
+    'url': 'http://managesf.url',
 }

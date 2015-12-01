@@ -128,6 +128,7 @@ def githubmock_request(url, request):
 
 class dummy_conf():
     def __init__(self):
+        self.managesf = {'url': 'http://managesf.tests.dom', }
         self.redmine = {'apikey': 'XXX',
                         'apihost': 'api-redmine.test.dom',
                         'apiurl': 'http://api-redmine.test.dom',
@@ -176,7 +177,7 @@ class dummy_conf():
                            'echo': False,
                            'encoding': 'utf-8',
                            }
-        self.services = ['redmine', 'gerrit']
+        self.services = ['managesf', ]
         self.logging = {'loggers':
                         {'root': {'level': 'INFO', 'handlers': ['console']},
                          'cauth': {'level': 'DEBUG', 'handlers': ['console']},

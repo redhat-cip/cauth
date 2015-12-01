@@ -90,8 +90,8 @@ class OpenIDAuthPlugin(base.AuthProtocolPlugin):
         verify_data_tokens = verify_response.content.split()
         verify_dict = dict((token.split(":")[0], token.split(":")[1])
                            for token in verify_data_tokens)
-        if (verify_response.status_code < 399
-           and verify_dict.get('is_valid') == 'true'):
+        if (verify_response.status_code < 399 and
+           verify_dict.get('is_valid') == 'true'):
             # Check we have access to the required info
             for i in ['openid.sreg.nickname',
                       'openid.sreg.email',

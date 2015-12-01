@@ -26,8 +26,7 @@ logger = logging.getLogger(__name__)
 class UserDetailsCreator:
     def __init__(self, conf):
         self.services = []
-        # TODO(mhu) get this list from a conf entry
-        for service in ('gerrit', 'redmine'):
+        for service in conf.services:
             try:
                 plugin = driver.DriverManager(
                     namespace='cauth.service',
