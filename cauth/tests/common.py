@@ -25,6 +25,10 @@ import urlparse
 class FakeResponse():
     def __init__(self, code, content=None, is_json=False):
         self.status_code = code
+        if self.status_code < 300:
+            self.ok = True
+        else:
+            self.ok = False
         self.content = content
         self._json = {}
         if is_json and content:

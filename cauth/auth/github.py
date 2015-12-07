@@ -61,6 +61,9 @@ class GithubPersonalAccessTokenAuthPlugin(BaseGithubAuthPlugin):
                                                  'x-oauth-basic')
         resp = requests.get("https://api.github.com/user/orgs",
                             auth=basic_auth)
+        if not resp.ok:
+            msg = 'Failed to get organizations'
+            logging.error(msg, resp)
         return resp
 
     @classmethod
@@ -69,20 +72,30 @@ class GithubPersonalAccessTokenAuthPlugin(BaseGithubAuthPlugin):
 
     def authenticate(self, **auth_context):
         token = auth_context.get('token', None)
+        basic_auth = requests.auth.HTTPBasicAuth(token,
+                                                 'x-oauth-basic')
         try:
-            basic_auth = requests.auth.HTTPBasicAuth(token,
-                                                     'x-oauth-basic')
             resp = requests.get("https://api.github.com/user",
                                 auth=basic_auth)
+            if not resp.ok:
+                msg = 'Failed to authenticate user'
+                logging.error(msg, resp)
             data = resp.json()
+
+            resp = requests.get("https://api.github.com/user/keys",
+                                auth=basic_auth)
+            if not resp.ok:
+                msg = 'Failed to get keys'
+                logging.error(msg, resp)
+
+            ssh_keys = resp.json()
         except Exception as e:
+            logging.error(e.message)
             raise base.UnauthenticatedError(e.message)
+
         login = data.get('login')
         email = data.get('email')
         name = data.get('name')
-        resp = requests.get("https://api.github.com/user/keys",
-                            auth=basic_auth)
-        ssh_keys = resp.json()
 
         if not self.organization_allowed(token):
             raise base.UnauthenticatedError("Organization not allowed")
@@ -106,6 +119,8 @@ class GithubAuthPlugin(BaseGithubAuthPlugin):
     def get_user_orgs(self, token):
         resp = requests.get("https://api.github.com/user/orgs",
                             headers={'Authorization': 'token ' + token})
+        if not resp.ok:
+            logging.error('Failed to get keys', resp)
         return resp
 
     def authenticate(self, **auth_context):
@@ -150,6 +165,9 @@ class GithubAuthPlugin(BaseGithubAuthPlugin):
 
         resp = requests.get("https://api.github.com/user",
                             headers={'Authorization': 'token ' + token})
+        if not resp.ok:
+            logging.error('Failed to authenticate', resp)
+            raise base.UnauthenticatedError(resp)
         data = resp.json()
         login = data.get('login')
         email = data.get('email')
@@ -157,6 +175,9 @@ class GithubAuthPlugin(BaseGithubAuthPlugin):
 
         resp = requests.get("https://api.github.com/users/%s/keys" % login,
                             headers={'Authorization': 'token ' + token})
+        if not resp.ok:
+            logging.error('Failed to get keys', resp)
+            raise base.UnauthenticatedError(resp)
         ssh_keys = resp.json()
 
         if not self.organization_allowed(token):
@@ -180,8 +201,11 @@ class GithubAuthPlugin(BaseGithubAuthPlugin):
         headers = {'Accept': 'application/json'}
         try:
             resp = requests.post(url, params=params, headers=headers)
-        except ConnectionError:
-            return None
+            if not resp.ok:
+                logging.error('Failed to post access tokens')
+                raise base.UnauthenticatedError(resp)
+        except ConnectionError as err:
+            raise base.UnauthenticatedError(err)
 
         jresp = resp.json()
         if 'access_token' in jresp:

@@ -34,6 +34,7 @@ class TestGerritPlugin(TestCase):
         self.assertIn('data', kwargs)
         self.assertIn('auth', kwargs)
         self.key_amount_added += 1
+        return FakeResponse(200)
 
     def gerrit_get_account_id_mock(self, *args, **kwargs):
         data = json.dumps({'_account_id': 42})
@@ -42,7 +43,7 @@ class TestGerritPlugin(TestCase):
         return FakeResponse(200, data)
 
     def gerrit_get_account_id_mock2(self, *args, **kwargs):
-        data = json.dumps({})
+        data = json.dumps({'_account_id': 0})
         # Simulate the garbage that occurs in live tests
         data = 'garb' + data
         return FakeResponse(200, data)
@@ -100,7 +101,7 @@ class TestGerritPlugin(TestCase):
             invoke_on_load=True,
             invoke_args=(self.conf,)).driver
         with patch('cauth.service.gerrit.requests') as r:
-            r.put = lambda *args, **kwargs: None
+            r.put = lambda *args, **kwargs: FakeResponse(200)
             r.get = self.gerrit_get_account_id_mock
             ger.add_account_as_external = Mock()
             ger.register_new_user({'login': 'john',
@@ -109,7 +110,7 @@ class TestGerritPlugin(TestCase):
                                    'ssh_keys': []})
             self.assertEqual(True, ger.add_account_as_external.called)
         with patch('cauth.service.gerrit.requests') as r:
-            r.put = lambda *args, **kwargs: None
+            r.put = lambda *args, **kwargs: FakeResponse(200)
             r.get = self.gerrit_get_account_id_mock2
             ger.add_account_as_external = Mock()
             ger.register_new_user({'login': 'john',
