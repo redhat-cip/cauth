@@ -43,9 +43,10 @@ class GerritServicePlugin(base.BaseServicePlugin):
                                            self.conf['admin_password']))
 
             if not response.ok:
-                msg = 'Failed to add ssh key %s of user %s' % (key.get('key'),
-                                                               username)
-                logger.error(msg, response)
+                msg = 'Failed to add ssh key %s of %s: %s' % (key.get('key'),
+                                                              username,
+                                                              response)
+                logger.error(msg)
 
     def add_account_as_external(self, account_id, username):
         # TODO(mhu) there's got to be a cleaner way. pygerrit ?
@@ -61,9 +62,9 @@ class GerritServicePlugin(base.BaseServicePlugin):
             c.execute(sql)
             db.commit()
             return True
-        except Exception as e:
-            msg = "Could not insert user %s in account_external_ids: %s"
-            logger.error(msg % (username, e.message))
+        except Exception:
+            msg = "Could not insert user %s in account_external_ids" % username
+            logger.exception(msg)
             return False
 
     def register_new_user(self, user):
@@ -76,8 +77,9 @@ class GerritServicePlugin(base.BaseServicePlugin):
                                 auth=(self.conf['admin_user'],
                                       self.conf['admin_password']))
         if not response.ok:
-            msg = 'Failed to register new user %s' % user['email']
-            logger.error(msg, response)
+            msg = 'Failed to register new user %s: %s' % (user['email'],
+                                                          response)
+            logger.error(msg)
             return False
 
         response = requests.get(url, headers=headers,
@@ -86,9 +88,9 @@ class GerritServicePlugin(base.BaseServicePlugin):
         data = response.content[4:]  # there is some garbage at the beginning
         try:
             account_id = json.loads(data)['_account_id']
-        except (KeyError, ValueError) as err:
+        except (KeyError, ValueError):
             msg = 'Failed to retreive account %s from server' % user['email']
-            logger.error(msg, err)
+            logger.exception(msg)
             return False
 
         fetch_ssh_keys = False
