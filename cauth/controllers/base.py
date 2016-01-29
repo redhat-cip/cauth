@@ -40,8 +40,8 @@ class BaseLoginController(RestController):
                 namespace='cauth.authentication',
                 name=auth_info['method'],
                 invoke_on_load=False).driver.get_args()
-            for arg in auth_args.keys():
-                auth_info['args'][arg] = kwargs.get(arg, '')
+            auth_args.update(kwargs)
+            auth_info['args'] = auth_args
         except RuntimeError:
             # will be caught later on
             pass
