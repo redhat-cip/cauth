@@ -62,20 +62,22 @@ class BaseLoginController(RestController):
                 name=auth_method,
                 invoke_on_load=True,
                 invoke_args=(conf,)).driver
-            valid_user = auth_plugin.authenticate(**auth_context)
-        except RuntimeError:
+        except (RuntimeError, base.AuthProtocolNotAvailableError) as e:
             response.status = 401
             msg = '"%s" is not a valid authentication method' % auth_method
-            logger.error(msg)
+            logger.error(msg + ': %s' % e)
             response.body = render('login.html',
                                    dict(back=auth_context['back'],
                                         message=msg))
             return response.body
+        try:
+            logger.info('%s plugin loaded' % auth_method)
+            valid_user = auth_plugin.authenticate(**auth_context)
         except base.UnauthenticatedError:
             response.status = 401
             response.body = render('login.html',
                                    dict(back=auth_context['back'],
-                                        message='Authorization failed.'))
+                                        message='Authentication failed.'))
             return response.body
         if valid_user:
             logger.info('%s successfully authenticated' % valid_user['login'])
