@@ -16,7 +16,8 @@
 
 from sqlalchemy import create_engine
 from pecan import conf
-from db import Session, Base, reset
+
+from cauth.model.db import reset, Base, Session
 
 
 def create_from_conf():

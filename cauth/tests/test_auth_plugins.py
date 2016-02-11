@@ -136,7 +136,9 @@ class TestPasswordAuthPlugin(BaseTestAuthPlugin):
         expected = {'login': 'user1',
                     'email': 'user@tests.dom',
                     'name': 'example user',
-                    'ssh_keys': [], }
+                    'ssh_keys': [],
+                    'external_auth': {'domain': 'CAUTH_CONF',
+                                      'external_id': 'user1'}}
         authenticated = driver.authenticate(**auth_context)
         self.assertEqual(expected,
                          authenticated,
@@ -159,10 +161,13 @@ class TestPasswordAuthPlugin(BaseTestAuthPlugin):
         # test valid user
         auth_context = {'username': 'les',
                         'password': 'userpass'}
+        d = TEST_LOCALDB_AUTH['managesf_url']
         expected = {'login': 'les',
                     'email': 'les@primus.com',
                     'name': 'Les Claypool',
-                    'ssh_keys': [{'key': 'Jerry was a race car driver'}, ], }
+                    'ssh_keys': [{'key': 'Jerry was a race car driver'}, ],
+                    'external_auth': {'domain': d,
+                                      'external_id': 'les'}}
         with patch('requests.get') as g:
             _response = {'username': 'les',
                          'fullname': 'Les Claypool',
@@ -196,10 +201,13 @@ class TestPasswordAuthPlugin(BaseTestAuthPlugin):
         expected = {'login': 'openstack',
                     'email': '',
                     'name': 'openstack',
-                    'ssh_keys': [], }
+                    'ssh_keys': [],
+                    'external_auth': {'domain': TEST_KEYSTONE_AUTH['auth_url'],
+                                      'external_id': 1234}}
         with patch('keystoneclient.client.Client') as c:
             client = MagicMock()
             client.authenticate.return_value = True
+            client.user_id = 1234
             c.return_value = client
             authenticated = driver.authenticate(**auth_context)
             self.assertEqual(expected,
@@ -227,10 +235,13 @@ class TestPasswordAuthPlugin(BaseTestAuthPlugin):
         # test valid user
         auth_context = {'username': 'Kenny',
                         'password': 'McCormick'}
+        who = TEST_LDAP_AUTH['dn'] % {'username': 'Kenny'}
         expected = {'login': 'Kenny',
                     'email': 'princesskenny@southpark.com',
                     'name': 'Purinsesu Kenny',
-                    'ssh_keys': [], }
+                    'ssh_keys': [],
+                    'external_auth': {'domain': TEST_LDAP_AUTH['host'],
+                                      'external_id': who}}
         with patch('ldap.initialize') as fake_init:
             conn = MagicMock()
             fake_init.return_value = conn
@@ -280,7 +291,9 @@ class TestPasswordAuthPlugin(BaseTestAuthPlugin):
                 expected = {'login': 'user1',
                             'email': 'user@tests.dom',
                             'name': 'example user',
-                            'ssh_keys': [], }
+                            'ssh_keys': [],
+                            'external_auth': {'domain': 'CAUTH_CONF',
+                                              'external_id': 'user1'}}
                 authenticated = driver.authenticate(**auth_context)
                 self.assertEqual(expected,
                                  authenticated,
@@ -293,7 +306,9 @@ class TestPasswordAuthPlugin(BaseTestAuthPlugin):
                 expected = {'login': 'les',
                             'email': 'les@primus.com',
                             'name': 'Les Claypool',
-                            'ssh_keys': [ssh, ], }
+                            'ssh_keys': [ssh, ],
+                            'external_auth': {'domain': 'https://tests.dom',
+                                              'external_id': 'les'}}
                 _response = {'username': 'les',
                              'fullname': 'Les Claypool',
                              'email': 'les@primus.com',
@@ -362,7 +377,9 @@ class TestGithubAuthPlugin(BaseTestAuthPlugin):
         expected = {'login': 'user6',
                     'email': 'user6@tests.dom',
                     'name': 'Demo user6',
-                    'ssh_keys': {'key': ''}}
+                    'ssh_keys': {'key': ''},
+                    'external_auth': {'domain': TEST_GITHUB_AUTH['auth_url'],
+                                      'external_id': 666}}
         with httmock.HTTMock(githubmock_request):
             authenticated = self.driver.authenticate(**auth_context)
             self.assertEqual(expected,
@@ -426,10 +443,13 @@ class TestOpenIDAuthPlugin(BaseTestAuthPlugin):
         auth_context = openid_identity.copy()
         auth_context['response'] = MagicMock()
         auth_context['back'] = '/'
+        i = openid_identity['openid.claimed_id']
         expected = {'login': 'NickyNicky',
                     'email': 'testy@test.com',
                     'name': 'Nick McTesty',
-                    'ssh_keys': []}
+                    'ssh_keys': [],
+                    'external_auth': {'domain': TEST_OPENID_AUTH['auth_url'],
+                                      'external_id': i}}
         with patch('requests.post') as p:
             p.return_value = FakeResponse(200,
                                           content="is_valid:true ns:http")
@@ -451,10 +471,13 @@ class TestGithubPersonalAccessTokenAuthPlugin(BaseTestAuthPlugin):
         """Test authentication with a personal access token from Github"""
         with httmock.HTTMock(githubmock_request):
             auth_context = {'token': 'user6_token'}
+            d = TEST_GITHUB_AUTH['auth_url']
             expected = {'login': 'user6',
                         'email': 'user6@tests.dom',
                         'name': 'Demo user6',
-                        'ssh_keys': {'key': ''}}
+                        'ssh_keys': {'key': ''},
+                        'external_auth': {'domain': d,
+                                          'external_id': 666}}
             authenticated = self.driver.authenticate(**auth_context)
             self.assertEqual(expected,
                              authenticated,

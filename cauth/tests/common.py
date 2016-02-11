@@ -81,7 +81,8 @@ def githubmock_request(url, request):
                   "name": "Demo user6",
                   "ssh_keys": "",
                   "code": "user6_code",
-                  "token": "user6_token"}
+                  "token": "user6_token",
+                  "id": 666}
     }
 
     headers = {'content-type': 'application/json'}
@@ -122,7 +123,8 @@ def githubmock_request(url, request):
         else:
             content = {'login': u,
                        'email': users[u]['email'],
-                       'name': users[u]['name']}
+                       'name': users[u]['name'],
+                       'id': users[u]['id']}
     return httmock.response(200, content, headers, None, 5, request)
 
 

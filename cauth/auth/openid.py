@@ -45,6 +45,9 @@ class OpenIDAuthPlugin(base.AuthProtocolPlugin):
             response = auth_context['response']
             self.redirect(back, response)
 
+    def get_domain(self):
+        return self.conf['auth_url']
+
     def redirect(self, back, response):
         """Send the user to the OpenID auth page"""
         params = {'back': back}
@@ -111,10 +114,13 @@ class OpenIDAuthPlugin(base.AuthProtocolPlugin):
         login = auth_context['openid.sreg.nickname']
         email = auth_context['openid.sreg.email']
         name = auth_context['openid.sreg.fullname']
+        external_id = auth_context['openid.claimed_id']
         logger.info(
             'Client %s (%s) authenticated through OpenID'
             % (login, email))
         return {'login': login,
                 'email': email,
                 'name': name,
-                'ssh_keys': ssh_keys}
+                'ssh_keys': ssh_keys,
+                'external_auth': {'external_id': external_id,
+                                  'domain': self.get_domain()}}

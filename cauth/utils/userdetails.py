@@ -19,6 +19,7 @@ import logging
 from stevedore import driver
 
 from cauth.service import base
+from cauth.model import db as auth_map
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +39,17 @@ class UserDetailsCreator:
                 logger.error(e.message)
 
     def create_user(self, user):
+        external_info = user.get('external_auth', {})
+        c_id = -1
+        if external_info:
+            c_id = auth_map.get_or_create_authenticated_user(**external_info)
+            del user['external_auth']
+            user['external_id'] = c_id
         for service in self.services:
             try:
                 service.register_new_user(user)
             except base.UserRegistrationError as e:
-                logger.info('When adding user %s: %s' % (user['login'],
-                                                         e.message))
+                logger.info('When adding user %s (ID %s): %s' % (user['login'],
+                                                                 c_id,
+                                                                 e.message))
         return True

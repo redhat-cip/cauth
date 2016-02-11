@@ -60,9 +60,14 @@ class LocalUserAuthPlugin(BasePasswordAuthPlugin):
                 return {'login': username,
                         'email': user.get('mail'),
                         'name': user.get('lastname'),
-                        'ssh_keys': []}
+                        'ssh_keys': [],
+                        'external_auth': {'domain': self.get_domain(),
+                                          'external_id': username}}
         err = '%s not found in local config file' % username
         raise base.UnauthenticatedError(err)
+
+    def get_domain(self):
+        return "CAUTH_CONF"
 
 
 class LDAPAuthPlugin(BasePasswordAuthPlugin):
@@ -70,6 +75,9 @@ class LDAPAuthPlugin(BasePasswordAuthPlugin):
     """
 
     _config_section = "ldap"
+
+    def get_domain(self):
+        return self.conf['host']
 
     def authenticate(self, **auth_context):
         username = auth_context.get('username', None)
@@ -99,7 +107,9 @@ class LDAPAuthPlugin(BasePasswordAuthPlugin):
             return {'login': username,
                     'email': mail[0],
                     'name': lastname[0],
-                    'ssh_keys': []}
+                    'ssh_keys': [],
+                    'external_auth': {'domain': self.get_domain(),
+                                      'external_id': who}}
 
         logger.error('LDAP client search failed')
         raise base.UnauthenticatedError('LDAP client search failed')
@@ -125,7 +135,13 @@ class ManageSFAuthPlugin(BasePasswordAuthPlugin):
         return {'login': username,
                 'email': infos['email'],
                 'name': infos['fullname'],
-                'ssh_keys': [{'key': infos['sshkey']}, ]}
+                'ssh_keys': [{'key': infos['sshkey']}, ],
+                'external_auth': {'domain': self.get_domain(),
+                                  # username is the primary key
+                                  'external_id': username}}
+
+    def get_domain(self):
+        return self.conf['managesf_url']
 
 
 class KeystoneAuthPlugin(BasePasswordAuthPlugin):
@@ -133,6 +149,9 @@ class KeystoneAuthPlugin(BasePasswordAuthPlugin):
     """
 
     _config_section = "keystone"
+
+    def get_domain(self):
+        return self.conf['auth_url']
 
     def authenticate(self, **auth_context):
         """Authentication against a keystone server. We simply try to fetch an
@@ -151,10 +170,13 @@ class KeystoneAuthPlugin(BasePasswordAuthPlugin):
                     # by an admin account. Either patch keystone to allow
                     # a user to fetch her own info, or add admin auth to this
                     # plugin in order to fetch the e-mail.
+                    external_id = client.user_id or username
                     return {'login': username,
                             'email': '',
                             'name': username,
-                            'ssh_keys': []}
+                            'ssh_keys': [],
+                            'external_auth': {'domain': self.get_domain(),
+                                              'external_id': external_id}}
             except kc.exceptions.Unauthorized:
                 msg = ("keystone authentication failed: "
                        "Invalid user or password")
@@ -189,6 +211,9 @@ class PasswordAuthPlugin(BasePasswordAuthPlugin):
                 pass
 
     def configure_plugin(self, conf):
+        pass
+
+    def get_domain(self):
         pass
 
     def authenticate(self, **auth_context):

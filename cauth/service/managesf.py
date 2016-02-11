@@ -39,7 +39,8 @@ class ManageSFServicePlugin(base.BaseServicePlugin):
         _user = {"full_name": user['name'],
                  "email": str(user['email']),
                  "username": user['login'],
-                 "ssh_keys": user.get('ssh_keys', [])
+                 "ssh_keys": user.get('ssh_keys', []),
+                 "external_id": user['external_id']
                  }
         data = json.dumps(_user, default=lambda o: o.__dict__)
 

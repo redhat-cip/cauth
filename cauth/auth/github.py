@@ -48,6 +48,9 @@ class BaseGithubAuthPlugin(base.AuthProtocolPlugin):
                 return False
         return True
 
+    def get_domain(self):
+        return self.conf['auth_url']
+
 
 class GithubPersonalAccessTokenAuthPlugin(BaseGithubAuthPlugin):
     """Allows a github user to authenticate with a personal access token,
@@ -104,7 +107,9 @@ class GithubPersonalAccessTokenAuthPlugin(BaseGithubAuthPlugin):
         return {'login': login,
                 'email': email,
                 'name': name,
-                'ssh_keys': ssh_keys}
+                'ssh_keys': ssh_keys,
+                'external_auth': {'domain': self.get_domain(),
+                                  'external_id': data.get('id') or login}}
 
 
 class GithubAuthPlugin(BaseGithubAuthPlugin):
@@ -189,7 +194,9 @@ class GithubAuthPlugin(BaseGithubAuthPlugin):
         return {'login': login,
                 'email': email,
                 'name': name,
-                'ssh_keys': ssh_keys}
+                'ssh_keys': ssh_keys,
+                'external_auth': {'domain': self.get_domain(),
+                                  'external_id': data.get('id') or login}}
 
     def get_access_token(self, code):
         url = "https://github.com/login/oauth/access_token"

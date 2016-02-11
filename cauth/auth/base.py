@@ -62,6 +62,14 @@ class AuthProtocolPlugin(object):
                {'login': login,
                 'email': email,
                 'name': name,
-                'ssh_keys': ssh_keys}
+                'ssh_keys': ssh_keys,
+                'external_auth': {'domain': domain,
+                                  'external_id': external_id}}
         :raises: UnauthenticatedError
         """
+
+    @abc.abstractmethod
+    def get_domain(self):
+        """returns a conf value specific to the authentication method acting
+        as a namespace. Typically, it will be return the configured
+        authentication endpoint url."""

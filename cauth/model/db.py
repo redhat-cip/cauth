@@ -17,12 +17,16 @@
 import string
 import random
 
-from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import Column, Integer, String
+
+from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm.exc import NoResultFound
+
 
 Base = declarative_base()
 Session = scoped_session(sessionmaker())
+
 
 STATE_LEN = 16
 
@@ -61,3 +65,50 @@ def get_url(state):
 
 def reset():
     Session.query(state_mapping).delete()
+
+
+class auth_mapping(Base):
+    __tablename__ = 'auth_mapping'
+
+    cauth_id = Column(Integer, primary_key=True)
+    # The IDP auth endpoint should be unique
+    domain = Column(String)
+    # we cannot be sure every IdP will provide a numeric uid so go with String
+    external_id = Column(String)
+
+
+def get_or_create_authenticated_user(domain, external_id):
+    filtering = {}
+    if domain:
+        filtering['domain'] = domain
+    if external_id:
+        filtering['external_id'] = external_id
+    try:
+        user = Session.query(auth_mapping).filter_by(**filtering).one()
+        return user.cauth_id
+    except NoResultFound:
+        user = auth_mapping(domain=domain,
+                            external_id=external_id)
+        Session.add(user)
+        Session.commit()
+        return user.cauth_id
+
+
+def get_authenticated_user_by_cauth_id(cauth_id):
+    try:
+        user = Session.query(auth_mapping).filter_by(cauth_id=cauth_id).one()
+        return {'cauth_id': user.cauth_id,
+                'domain': user.domain,
+                'external_id': user.external_id}
+    except NoResultFound:
+        return None
+
+
+def delete_authenticated_user(cauth_id):
+    # Just here for completion as relogging will simply recreate the user
+    try:
+        user = Session.query(auth_mapping).filter_by(cauth_id=cauth_id).one()
+        user.delete()
+    except NoResultFound:
+        # do nothing
+        return

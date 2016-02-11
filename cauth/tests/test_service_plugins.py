@@ -108,7 +108,8 @@ class TestGerritPlugin(TestCase):
             ger.register_new_user({'login': 'john',
                                    'email': 'john@tests.dom',
                                    'name': 'John Doe',
-                                   'ssh_keys': []})
+                                   'ssh_keys': [],
+                                   'external_id': 42})
             self.assertEqual(True, ger.add_account_as_external.called)
         with patch('cauth.service.gerrit.requests') as r:
             r.put = lambda *args, **kwargs: FakeResponse(200)
@@ -117,7 +118,8 @@ class TestGerritPlugin(TestCase):
             ger.register_new_user({'login': 'john',
                                    'email': 'john@tests.dom',
                                    'name': 'John Doe',
-                                   'ssh_keys': []})
+                                   'ssh_keys': [],
+                                   'external_id': 42})
             self.assertEqual(False, ger.add_account_as_external.called)
 
     def test_create_managesf_user(self):
@@ -135,12 +137,14 @@ class TestGerritPlugin(TestCase):
             msf.register_new_user({'login': 'john',
                                    'email': 'john@tests.dom',
                                    'name': 'John Doe',
-                                   'ssh_keys': []})
+                                   'ssh_keys': [],
+                                   'external_id': 42})
             url = "%s/manage/services_users/" % self.conf.managesf['url']
             data = json.dumps({"full_name": "John Doe",
                                "email": "john@tests.dom",
                                "username": "john",
-                               "ssh_keys": []},
+                               "ssh_keys": [],
+                               'external_id': 42},
                               default=lambda o: o.__dict__)
             headers = {"Content-type": "application/json"}
             cookie = {'auth_pubtkt': 'MAGICCOOKIE'}
