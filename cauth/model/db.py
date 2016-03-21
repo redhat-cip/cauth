@@ -29,6 +29,7 @@ Session = scoped_session(sessionmaker())
 
 
 STATE_LEN = 16
+MAX_URL_LEN = 4096
 
 
 def gen_state(len):
@@ -42,7 +43,7 @@ class state_mapping(Base):
 
     index = Column(Integer, primary_key=True)
     state = Column(String(STATE_LEN))
-    url = Column(String)
+    url = Column(String(MAX_URL_LEN))
 
 
 def put_url(url):
@@ -72,9 +73,10 @@ class auth_mapping(Base):
 
     cauth_id = Column(Integer, primary_key=True)
     # The IDP auth endpoint should be unique
-    domain = Column(String)
+    domain = Column(String(MAX_URL_LEN))
     # we cannot be sure every IdP will provide a numeric uid so go with String
-    external_id = Column(String)
+    # and just to be sure, a huge one
+    external_id = Column(String(MAX_URL_LEN))
 
 
 def get_or_create_authenticated_user(domain, external_id):
