@@ -120,6 +120,9 @@ def githubmock_request(url, request):
             return httmock.response(401, error_content)
         if 'keys' in url.path:
             content = {'key': users[u]['ssh_keys']}
+        elif '/user/emails' in url.path:
+            content = json.dumps([
+                {'email': users[u]['email'], 'primary': True}])
         else:
             content = {'login': u,
                        'email': users[u]['email'],

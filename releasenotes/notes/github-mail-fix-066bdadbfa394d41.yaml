@@ -1,0 +1,4 @@
+---
+issues:
+  - Fix an issue when github email address are not
+    properly collected.

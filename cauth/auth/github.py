@@ -175,7 +175,6 @@ class GithubAuthPlugin(BaseGithubAuthPlugin):
             raise base.UnauthenticatedError(resp)
         data = resp.json()
         login = data.get('login')
-        email = data.get('email')
         name = data.get('name')
 
         resp = requests.get("https://api.github.com/users/%s/keys" % login,
@@ -187,6 +186,21 @@ class GithubAuthPlugin(BaseGithubAuthPlugin):
 
         if not self.organization_allowed(token):
             raise base.UnauthenticatedError("Organization not allowed")
+
+        resp = requests.get("https://api.github.com/user/emails",
+                            headers={'Authorization': 'token ' + token})
+        if not resp.ok:
+            logger.error('Failed to get emails', resp)
+            raise base.UnauthenticatedError(resp)
+        emails = resp.json()
+
+        logger.debug("Email received from apigh/user/emails: %s" % str(emails))
+        # Get email from autorize response, just in case no primary is set
+        email = data.get('email')
+        for mail in emails:
+            if mail.get('primary') is True:
+                email = mail.get('email')
+                break
 
         logger.info(
             'Client %s (%s) authenticated through Github'
