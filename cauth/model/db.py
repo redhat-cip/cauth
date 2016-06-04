@@ -18,6 +18,7 @@ import string
 import random
 
 from sqlalchemy import Column, Integer, String
+from sqlalchemy import ForeignKey
 
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
@@ -29,6 +30,7 @@ Session = scoped_session(sessionmaker())
 
 
 STATE_LEN = 16
+API_KEY_LEN = 32
 MAX_URL_LEN = 4096
 
 
@@ -109,8 +111,56 @@ def get_authenticated_user_by_cauth_id(cauth_id):
 def delete_authenticated_user(cauth_id):
     # Just here for completion as relogging will simply recreate the user
     try:
-        user = Session.query(auth_mapping).filter_by(cauth_id=cauth_id).one()
+        user = Session.query(auth_mapping).filter_by(cauth_id=cauth_id)
         user.delete()
+    except NoResultFound:
+        # do nothing
+        return
+
+
+class api_keys(Base):
+    __tablename__ = 'api_keys'
+
+    cauth_id = Column(Integer, ForeignKey('auth_mapping.cauth_id'),
+                      primary_key=True)
+    # random hash
+    key = Column(String(API_KEY_LEN))
+
+
+class APIKeyUnicityError(Exception):
+    """Invoked when trying to create a key and one already exists for user"""
+
+
+def create_api_key(cauth_id):
+    if get_api_key_from_cauth_id(cauth_id):
+        raise APIKeyUnicityError('Only one key per user allowed')
+    key = gen_state(API_KEY_LEN)
+    cm = api_keys(cauth_id=cauth_id, key=key)
+    Session.add(cm)
+    Session.commit()
+    return key
+
+
+def get_cauth_id_from_api_key(key):
+    try:
+        result = Session.query(api_keys).filter_by(key=key).one()
+        return result.cauth_id
+    except NoResultFound:
+        return None
+
+
+def get_api_key_from_cauth_id(cauth_id):
+    try:
+        result = Session.query(api_keys).filter_by(cauth_id=cauth_id).one()
+        return result.key
+    except NoResultFound:
+        return None
+
+
+def delete_api_key(cauth_id):
+    try:
+        result = Session.query(api_keys).filter_by(cauth_id=cauth_id)
+        result.delete()
     except NoResultFound:
         # do nothing
         return

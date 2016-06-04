@@ -21,6 +21,7 @@ from pecan.rest import RestController
 
 from cauth.auth import base as exceptions
 from cauth.controllers import base, github, introspection, openid
+from cauth.controllers import apikey
 from cauth.utils.common import LOGOUT_MSG
 
 
@@ -47,5 +48,6 @@ class RootController(object):
     except exceptions.AuthProtocolNotAvailableError as e:
         logger.error("%s - skipping callback endpoint" % e.message)
     about = introspection.IntrospectionController()
+    apikey = apikey.APIKeyController()
 
     logout = LogoutController()

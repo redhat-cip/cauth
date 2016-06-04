@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import string
+
 from unittest import TestCase
 from mock import patch
 from M2Crypto import RSA, BIO
@@ -21,6 +23,7 @@ from pecan import load_app
 
 from cauth.utils import common
 from cauth.tests.common import dummy_conf, FakeResponse, githubmock_request
+from cauth.model.db import API_KEY_LEN
 
 import os
 
@@ -250,5 +253,109 @@ class TestCauthApp(FunctionalTest):
         self.assertEqual(set(['Password',
                               'Github',
                               'GithubPersonalAccessToken',
-                              'OpenID']),
+                              'OpenID',
+                              'APIKey']),
                          set(response['service']['auth_methods']))
+
+    def test_api_key_crud_flow(self):
+        payload = {'method': 'Password',
+                   'back': 'r/',
+                   'args': {'username': 'user2',
+                            'password': 'userpass'}, }
+        to_patch = 'cauth.utils.userdetails.UserDetailsCreator.create_user'
+        with patch(to_patch) as cu:
+            cu.return_value = 42
+            with patch('requests.get'):
+                response = self.app.post_json('/login',
+                                              payload)
+                self.assertEqual(303,
+                                 response.status_int)
+                # No key to begin with
+                key_get = self.app.get('/apikey', status="*")
+                self.assertEqual(401,
+                                 key_get.status_int)
+                good_cookie = common.create_ticket(cid=42, uid='user2')
+                self.app.set_cookie('auth_pubtkt', good_cookie)
+                key_get = self.app.get('/apikey', status="*")
+                self.assertEqual(404,
+                                 key_get.status_int)
+                # create the API key
+                key_create = self.app.post('/apikey?cauth_id=42')
+                self.assertEqual(201,
+                                 key_create.status_int)
+                self.assertTrue('api_key' in key_create.json,
+                                key_create.json)
+                api_key = key_create.json['api_key']
+                # let's check the API key out
+                self.assertEqual(API_KEY_LEN,
+                                 len(api_key),
+                                 api_key)
+                pool = string.ascii_letters + string.digits
+                self.assertTrue(all(x in pool for x in api_key))
+                # user2 can fetch the API key now
+                key_get = self.app.get('/apikey?cauth_id=42')
+                self.assertEqual(200,
+                                 key_get.status_int)
+                self.assertEqual(api_key,
+                                 key_get.json['api_key'])
+                # find out which key we want from the cookie
+                key_get = self.app.get('/apikey')
+                self.assertEqual(200,
+                                 key_get.status_int)
+                self.assertEqual(api_key,
+                                 key_get.json['api_key'])
+                # Key already exists
+                key_create = self.app.post('/apikey?cauth_id=42', status="*")
+                self.assertEqual(409,
+                                 key_create.status_int)
+                # Try to fetch the key authenticated as someone else
+                bad_cookie = common.create_ticket(cid=99, uid='user3')
+                self.app.set_cookie('auth_pubtkt', bad_cookie)
+                key_get = self.app.get('/apikey/?cauth_id=42', status="*")
+                self.assertEqual(401,
+                                 key_get.status_int)
+                # can't get the goodies without a cookie
+                self.app.reset()
+                key_get = self.app.get('/apikey/?cauth_id=42', status="*")
+                self.assertEqual(401,
+                                 key_get.status_int)
+                key_get = self.app.get('/apikey', status="*")
+                self.assertEqual(401,
+                                 key_get.status_int)
+                # Delete the key
+                self.app.set_cookie('auth_pubtkt', good_cookie)
+                key_delete = self.app.delete('/apikey')
+                self.assertEqual(204,
+                                 key_delete.status_int)
+                key_get = self.app.get('/apikey', status="*")
+                self.assertEqual(404,
+                                 key_get.status_int)
+                # clean up
+                self.app.reset()
+
+    def test_api_key_login(self):
+        payload = {'method': 'Password',
+                   'back': 'r/',
+                   'args': {'username': 'user3',
+                            'password': 'userpass'}, }
+        to_patch = 'cauth.utils.userdetails.UserDetailsCreator.create_user'
+        with patch(to_patch) as cu:
+            cu.return_value = 123
+            with patch('requests.get'):
+                response = self.app.post_json('/login',
+                                              payload)
+                good_cookie = common.create_ticket(cid=123, uid='user3')
+                self.app.set_cookie('auth_pubtkt', good_cookie)
+                # create the API key
+                key_create = self.app.post('/apikey')
+                self.assertEqual(201,
+                                 key_create.status_int)
+                api_key = key_create.json['api_key']
+                self.app.reset()
+                payload['method'] = 'APIKey'
+                payload['args'] = {'api_key': api_key}
+                response = self.app.post_json('/login',
+                                              payload)
+        self.assertEqual(response.status_int, 303)
+        self.assertEqual('http://localhost/r/', response.headers['Location'])
+        self.assertIn('Set-Cookie', response.headers)

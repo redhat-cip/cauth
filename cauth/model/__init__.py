@@ -36,7 +36,7 @@ def checkout_listener(dbapi_con, con_record, con_proxy):
         if e.args[0] in (2006,   # MySQL server has gone away
                          2013,   # Lost connection to server during query
                          2055):  # Lost connection to server
-        # caught by pool, which will retry with a new connection
+            # caught by pool, which will retry with a new connection
             raise exc.DisconnectionError()
         else:
             raise
