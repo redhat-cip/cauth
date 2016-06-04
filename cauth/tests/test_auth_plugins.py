@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#
 # Copyright (C) 2015 eNovance SAS <licensing@enovance.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -185,6 +187,25 @@ class TestPasswordAuthPlugin(BaseTestAuthPlugin):
             g.return_value = FakeResponse(401, 'Unauthorized')
             with self.assertRaises(base.UnauthenticatedError):
                 driver.authenticate(**auth_context)
+        # test unicode username
+        auth_context = {'username': u'自来也',
+                        'password': 'userpass'}
+        expected = {'login': u'自来也',
+                    'email': 'rasengan@sennin.com',
+                    'name': 'The Gallant Jiraiya',
+                    'ssh_keys': [{'key': 'Icha Icha Paradise'}, ],
+                    'external_auth': {'domain': d,
+                                      'external_id': u'自来也'}}
+        with patch('requests.get') as g:
+            _response = {'username': u'自来也',
+                         'fullname': 'The Gallant Jiraiya',
+                         'email': 'rasengan@sennin.com',
+                         'sshkey': 'Icha Icha Paradise'}
+            g.return_value = FakeResponse(200, json.dumps(_response), True)
+            authenticated = driver.authenticate(**auth_context)
+            self.assertEqual(expected,
+                             authenticated,
+                             "Got %r" % authenticated)
 
     def test_keystone_auth(self):
         """Test password authentication with keystone only"""

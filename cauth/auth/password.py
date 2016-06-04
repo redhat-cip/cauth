@@ -125,7 +125,8 @@ class ManageSFAuthPlugin(BasePasswordAuthPlugin):
         username = auth_context.get('username', '')
         password = auth_context.get('password', '')
         bind_url = urllib.basejoin(self.conf['managesf_url'], '/manage/bind')
-        headers = {"Authorization": encode(username, password)}
+        headers = {"Authorization": encode(username.encode('utf8'),
+                                           password)}
         response = requests.get(bind_url, headers=headers)
 
         if response.status_code > 399:
