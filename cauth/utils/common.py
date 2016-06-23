@@ -54,12 +54,16 @@ def pre_register_user(user):
         user['email'] = '%s@%s' % (user['login'], conf.app['cookie_domain'])
 
     udc = userdetails.UserDetailsCreator(conf)
-    udc.create_user(user)
+    return udc.create_user(user)
 
 
 def setup_response(user, back):
-    pre_register_user(user)
+    c_id = pre_register_user(user)
+    # c_id is added to the cauth cookie so that the storyboard client can
+    # authenticate to storyboard_api.
+    # the c_id is stored in browser local storage after authentication.
     ticket = create_ticket(uid=user['login'],
+                           cid=c_id,
                            validuntil=(
                                time.time() + conf.app['cookie_period']))
     enc_ticket = urllib.quote_plus(ticket)

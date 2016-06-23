@@ -52,4 +52,4 @@ class UserDetailsCreator:
                 logger.info('When adding user %s (ID %s): %s' % (user['login'],
                                                                  c_id,
                                                                  e.message))
-        return True
+        return c_id
