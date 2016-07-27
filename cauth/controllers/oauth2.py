@@ -27,26 +27,24 @@ from cauth.utils import common
 logger = logging.getLogger(__name__)
 
 
-OAUTH_PROVIDERS_PLUGINS = ['Github', ]
+OAUTH_PROVIDERS_PLUGINS = ['Github',
+                           'Google', ]
 
 
 class OAuth2Controller(object):
     def __init__(self):
-        plugin = None
+        self.auth_plugins = {}
         for p in OAUTH_PROVIDERS_PLUGINS:
             try:
-                plugin = driver.DriverManager(
+                self.auth_plugins[p] = driver.DriverManager(
                     namespace='cauth.authentication',
                     name=p,
                     invoke_on_load=True,
                     invoke_args=(conf,)).driver
-                # load the first one, we frown upon multiple providers at once
-                break
+                logger.info('Loaded OAuth2 plugin %s' % p)
             except:
                 pass
-        if plugin:
-            self.auth_plugin = plugin
-        else:
+        if not self.auth_plugins:
             msg = ('no valid configuration found for any of the '
                    'supported OAuth '
                    'providers (%s)' % ', '.join(OAUTH_PROVIDERS_PLUGINS))
@@ -60,13 +58,19 @@ class OAuth2Controller(object):
         try:
             # Verify the state previously put in the db
             state = auth_context.get('state', None)
-            back = db.get_url(state)
+            back, provider = db.get_url(state)
             if not back:
                 err = 'OAuth callback with forged state, discarding'
                 logger.debug(err)
                 raise base.UnauthenticatedError(err)
+            auth_plugin = self.auth_plugins.get(provider)
+            if not auth_plugin:
+                msg = 'Unknown OAuth provider: %s' % provider
+                logger.error(msg)
+                raise base.UnauthenticatedError(msg)
+            logger.debug('Callback called by OAuth provider %s' % provider)
             auth_context['back'] = back
-            valid_user = self.auth_plugin.authenticate(**auth_context)
+            valid_user = auth_plugin.authenticate(**auth_context)
         except base.UnauthenticatedError as e:
             response.status = 401
             auth_methods = [k for k, v in conf.get('auth', {})]
@@ -80,9 +84,9 @@ class OAuth2Controller(object):
         common.setup_response(valid_user,
                               back)
 
-    @expose()
-    def index(self, **kwargs):
-        auth_context = kwargs
-        auth_context['response'] = response
-        # we don't expect a return value, we set up the redirect here
-        self.auth_plugin.authenticate(**auth_context)
+#    @expose()
+#    def index(self, **kwargs):
+#        auth_context = kwargs
+#        auth_context['response'] = response
+#        # we don't expect a return value, we set up the redirect here
+#        self.auth_plugin.authenticate(**auth_context)

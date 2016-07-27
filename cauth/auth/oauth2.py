@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 class BaseOAuth2Plugin(base.AuthProtocolPlugin):
 
+    # The name of the plugin goes there
+    provider = "GenericOAuth2DontUseMe"
     _config_section = "OAuth2"
     # config will have the following elements:
     # * client_id: the provider's app id to use to initiate the workflow
@@ -94,14 +96,15 @@ class BaseOAuth2Plugin(base.AuthProtocolPlugin):
 
     def redirect(self, back, response):
         """Send the user to the provider's auth page"""
-        state = db.put_url(back)
+        state = db.put_url(back, self.provider)
         scope = self.scope
         response.status_code = 302
         location = self.auth_url + "?" + \
             urllib.urlencode({'client_id': self.conf['client_id'],
                               'redirect_uri': self.conf['redirect_uri'],
                               'state': state,
-                              'scope': scope})
+                              'scope': scope,
+                              'response_type': 'code'})
         logger.debug('Redirecting for OAuth2 authentication (step 1) to ' +
                      location)
         response.location = location

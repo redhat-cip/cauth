@@ -75,7 +75,7 @@ class GithubController(object):
         try:
             # Verify the state previously put in the db
             state = auth_context.get('state', None)
-            back = db.get_url(state)
+            back, _ = db.get_url(state)
             if not back:
                 err = 'GITHUB callback called with an unknown state.'
                 raise base.UnauthenticatedError(err)

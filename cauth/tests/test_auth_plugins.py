@@ -46,10 +46,16 @@ TEST_LDAP_AUTH = {
 
 
 TEST_GITHUB_AUTH = {
-    'auth_url': 'https://github.com/login/oauth/authorize',
     'redirect_uri': 'https://fqdn/auth/login/oauth2/callback',
     'client_id': 'your_github_app_id',
     'client_secret': 'your_github_app_secret',
+}
+
+
+TEST_GOOGLE_AUTH = {
+    'redirect_uri': 'https://fqdn/auth/login/oauth2/callback',
+    'client_id': 'your_google_app_id',
+    'client_secret': 'your_google_app_secret',
 }
 
 
@@ -104,11 +110,13 @@ class TestDrivers(BaseTestAuthPlugin):
         conf = {'auth': {
             'ldap': TEST_LDAP_AUTH,
             'github': TEST_GITHUB_AUTH,
+            'google': TEST_GOOGLE_AUTH,
             'localdb': TEST_LOCALDB_AUTH,
             'users': TEST_USERS_AUTH,
             'keystone': TEST_KEYSTONE_AUTH, }, }
         for plugin in ('GithubPersonalAccessToken',
                        'Github',
+                       'Google',
                        'Password'):
             driver = self._load_auth_plugin(plugin, conf)
             self.assertEqual(plugin + 'AuthPlugin',
@@ -398,7 +406,7 @@ class TestGithubAuthPlugin(BaseTestAuthPlugin):
                     'email': 'user6@tests.dom',
                     'name': 'Demo user6',
                     'ssh_keys': {'key': ''},
-                    'external_auth': {'domain': TEST_GITHUB_AUTH['auth_url'],
+                    'external_auth': {'domain': self.driver.auth_url,
                                       'external_id': 666}}
         with httmock.HTTMock(githubmock_request):
             authenticated = self.driver.authenticate(**auth_context)
@@ -419,6 +427,53 @@ class TestGithubAuthPlugin(BaseTestAuthPlugin):
                             'error_description': 'No luck',
                             'calling_back': True}
             self.driver.authenticate(**auth_context)
+
+
+class TestGoogleAuthPlugin(BaseTestAuthPlugin):
+    def setUp(self):
+        conf = {'auth': {'google': TEST_GOOGLE_AUTH, }, }
+        self.driver = self._load_auth_plugin('Google', conf)
+        self.gplus_output = {"kind": "plus#person",
+                             "etag": "\"xw0en60W6-NurXn4VBU-CMjSPEw/2\"",
+                             "nickname": "dio",
+                             "gender": "male",
+                             "emails": [{"value": "dio.brando@warudo.com",
+                                         "type": "account"}],
+                             "objectType": "person",
+                             "id": "999999",
+                             "displayName": "Dio Brando (dio)",
+                             "name": {"familyName": "Brando",
+                                      "givenName": "Dio"},
+                             "url": "https://plus.google.com/999999",
+                             "image": {"url": "https://wryyyy",
+                                       "isDefault": False},
+                             "isPlusUser": True,
+                             "language": "fr",
+                             "circledByCount": 18,
+                             "verified": False}
+
+    def test_get_user_data(self):
+        """Test fetching user data from google apis."""
+        google_output = json.dumps(self.gplus_output)
+        with patch('requests.get') as get:
+            get.return_value = FakeResponse(200,
+                                            content=google_output,
+                                            is_json=True)
+            user = self.driver.get_user_data(token='MYTOKEN')
+            get.assert_called_with("https://www.googleapis.com/plus/"
+                                   "v1/people/me?access_token=MYTOKEN")
+            self.assertEqual("dio.brando",
+                             user.get('login'))
+            self.assertEqual("Dio Brando",
+                             user.get('name'))
+            self.assertEqual("dio.brando@warudo.com",
+                             user.get('email'))
+            self.assertEqual([],
+                             user.get('ssh_keys'))
+            self.assertEqual("https://accounts.google.com/o/oauth2/v2/auth",
+                             user.get('external_auth', {}).get('domain'))
+            self.assertEqual("999999",
+                             user.get('external_auth', {}).get('external_id'))
 
 
 class TestOpenIDAuthPlugin(BaseTestAuthPlugin):
@@ -491,7 +546,7 @@ class TestGithubPersonalAccessTokenAuthPlugin(BaseTestAuthPlugin):
         """Test authentication with a personal access token from Github"""
         with httmock.HTTMock(githubmock_request):
             auth_context = {'token': 'user6_token'}
-            d = TEST_GITHUB_AUTH['auth_url']
+            d = self.driver.auth_url
             expected = {'login': 'user6',
                         'email': 'user6@tests.dom',
                         'name': 'Demo user6',

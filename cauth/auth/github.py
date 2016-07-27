@@ -115,6 +115,8 @@ class GithubAuthPlugin(BaseGithubAuthPlugin,
     """Allows a Github user to authenticate with the OAuth protocol.
     """
 
+    provider = "Github"
+
     scope = 'user:email, read:public_key, read:org'
     access_token_url = 'https://github.com/login/oauth/access_token'
 

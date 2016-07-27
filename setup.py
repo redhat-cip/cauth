@@ -56,6 +56,7 @@ setup(
             ('GithubPersonalAccessToken = '
              'cauth.auth.github:GithubPersonalAccessTokenAuthPlugin'),
             ('Github = cauth.auth.github:GithubAuthPlugin'),
+            ('Google = cauth.auth.google:GoogleAuthPlugin'),
             ('Password = cauth.auth.password:PasswordAuthPlugin'),
             ('OpenID = cauth.auth.openid:OpenIDAuthPlugin'),
             ('APIKey = cauth.auth.apikey:APIKeyAuthPlugin')

@@ -46,11 +46,13 @@ class state_mapping(Base):
     index = Column(Integer, primary_key=True)
     state = Column(String(STATE_LEN))
     url = Column(String(MAX_URL_LEN))
+    # providers are auth plugin names, PEP8 implies they must be < 80 chars
+    provider = Column(String(80))
 
 
-def put_url(url):
+def put_url(url, provider):
     state = gen_state(STATE_LEN)
-    cm = state_mapping(state=state, url=url)
+    cm = state_mapping(state=state, url=url, provider=provider)
     Session.add(cm)
     Session.commit()
 
@@ -59,7 +61,8 @@ def put_url(url):
 
 def get_url(state):
     ci = Session.query(state_mapping).filter_by(state=state)
-    ret = None if ci.first() is None else ci.first().url
+    ret = (None, None) if ci.first() is None else (ci.first().url,
+                                                   ci.first().provider)
     if ci:
         ci.delete()
 
