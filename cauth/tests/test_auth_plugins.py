@@ -46,9 +46,8 @@ TEST_LDAP_AUTH = {
 
 
 TEST_GITHUB_AUTH = {
-    'top_domain': 'tests.dom',
     'auth_url': 'https://github.com/login/oauth/authorize',
-    'redirect_uri': 'https://github/redirect/url',
+    'redirect_uri': 'https://fqdn/auth/login/oauth2/callback',
     'client_id': 'your_github_app_id',
     'client_secret': 'your_github_app_secret',
 }

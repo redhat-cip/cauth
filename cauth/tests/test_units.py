@@ -202,7 +202,7 @@ class TestCauthApp(FunctionalTest):
                     ['user:email, read:public_key, read:org'],
                     parsed_qs.get('scope'))
                 self.assertEqual(
-                    ['http://tests.dom/auth/login/github/callback"'],
+                    ['http://tests.dom/auth/login/oauth2/callback"'],
                     parsed_qs.get('redirect_uri'))
 
     def test_json_github_login(self):
@@ -223,7 +223,7 @@ class TestCauthApp(FunctionalTest):
                     ['user:email, read:public_key, read:org'],
                     parsed_qs.get('scope'))
                 self.assertEqual(
-                    ['http://tests.dom/auth/login/github/callback"'],
+                    ['http://tests.dom/auth/login/oauth2/callback"'],
                     parsed_qs.get('redirect_uri'))
 
     def test_json_github_API_token_login(self):

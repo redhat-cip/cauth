@@ -58,9 +58,7 @@ auth = {
         'mail': 'ldap_account_mail_attribute',
     },
     'github': {
-        'top_domain': 'tests.dom',
-        'auth_url': 'https://github.com/login/oauth/authorize',
-        'redirect_uri': 'https://github/redirect/url',
+        'redirect_uri': 'https://fqdn/auth/login/oauth2/callback',
         'client_id': 'your_github_app_id',
         'client_secret': 'your_github_app_secret',
         'allowed_organizations': 'your_allowed_organizations'

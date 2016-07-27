@@ -17,11 +17,8 @@
 
 import logging
 import requests
-from requests.exceptions import ConnectionError
-import urllib
 
-from cauth.auth import base
-from cauth.model import db
+from cauth.auth import base, oauth2
 
 
 """GitHub-based authentication plugins."""
@@ -33,6 +30,7 @@ logger = logging.getLogger(__name__)
 class BaseGithubAuthPlugin(base.AuthProtocolPlugin):
 
     _config_section = "github"
+    auth_url = 'https://github.com/login/oauth/authorize'
 
     def organization_allowed(self, token):
         allowed_orgs = self.conf.get('allowed_organizations')
@@ -49,7 +47,7 @@ class BaseGithubAuthPlugin(base.AuthProtocolPlugin):
         return True
 
     def get_domain(self):
-        return self.conf['auth_url']
+        return self.auth_url
 
 
 class GithubPersonalAccessTokenAuthPlugin(BaseGithubAuthPlugin):
@@ -112,64 +110,37 @@ class GithubPersonalAccessTokenAuthPlugin(BaseGithubAuthPlugin):
                                   'external_id': data.get('id') or login}}
 
 
-class GithubAuthPlugin(BaseGithubAuthPlugin):
-    """Allows a Github user to authenticate with the oAuth protocol.
+class GithubAuthPlugin(BaseGithubAuthPlugin,
+                       oauth2.BaseOAuth2Plugin):
+    """Allows a Github user to authenticate with the OAuth protocol.
     """
 
-    @classmethod
-    def get_args(cls):
-        # not relevant here
-        return {}
+    scope = 'user:email, read:public_key, read:org'
+    access_token_url = 'https://github.com/login/oauth/access_token'
 
     def get_user_orgs(self, token):
+        headers = {'Authorization': self.access_token_type + ' ' + token}
         resp = requests.get("https://api.github.com/user/orgs",
-                            headers={'Authorization': 'token ' + token})
+                            headers=headers)
         if not resp.ok:
             logger.error('Failed to get keys', resp)
         return resp
 
-    def authenticate(self, **auth_context):
-        if auth_context.get('calling_back', False):
-            state = auth_context.get('state', None)
-            code = auth_context.get('code', None)
-            error = auth_context.get('error', None)
-            error_description = auth_context.get('error_description', None)
-            return self._authenticate(state, code, error, error_description)
-        else:
-            back = auth_context['back']
-            response = auth_context['response']
-            self.redirect(back, response)
+    def get_error(self, **auth_context):
+        """Parse the auth context returned by OAuth's first step."""
+        error = auth_context.get('error', None)
+        error_description = auth_context.get('error_description', None)
+        return error, error_description
 
-    def redirect(self, back, response):
-        """Send the user to the Github auth page"""
-        state = db.put_url(back)
-        scope = 'user:email, read:public_key, read:org'
-        response.status_code = 302
-        response.location = self.conf['auth_url'] + "?" + \
-            urllib.urlencode({'client_id': self.conf['client_id'],
-                              'redirect_uri': self.conf['redirect_uri'],
-                              'state': state,
-                              'scope': scope})
+    def get_provider_id(self, user_data):
+        """Return a provider-specific unique id from the user data."""
+        return user_data.get('id') or user_data.get('login')
 
-    def _authenticate(self, state=None, code=None,
-                      error=None, error_description=None):
-        """Called at the callback level"""
-        if error:
-            err = 'GITHUB callback called with an error (%s): %s' % (
-                error,
-                error_description)
-            raise base.UnauthenticatedError(err)
-        if not state or not code:
-            err = 'GITHUB callback called without state or code as params.'
-            raise base.UnauthenticatedError(err)
+    def get_user_data(self, token):
 
-        token = self.get_access_token(code)
-        if not token:
-            err = 'Unable to request a token on GITHUB.'
-            raise base.UnauthenticatedError(err)
-
+        headers = {'Authorization': self.access_token_type + ' ' + token}
         resp = requests.get("https://api.github.com/user",
-                            headers={'Authorization': 'token ' + token})
+                            headers=headers)
         if not resp.ok:
             logger.error('Failed to authenticate', resp)
             raise base.UnauthenticatedError(resp)
@@ -178,7 +149,7 @@ class GithubAuthPlugin(BaseGithubAuthPlugin):
         name = data.get('name')
 
         resp = requests.get("https://api.github.com/users/%s/keys" % login,
-                            headers={'Authorization': 'token ' + token})
+                            headers=headers)
         if not resp.ok:
             logger.error('Failed to get keys', resp)
             raise base.UnauthenticatedError(resp)
@@ -188,7 +159,7 @@ class GithubAuthPlugin(BaseGithubAuthPlugin):
             raise base.UnauthenticatedError("Organization not allowed")
 
         resp = requests.get("https://api.github.com/user/emails",
-                            headers={'Authorization': 'token ' + token})
+                            headers=headers)
         if not resp.ok:
             logger.error('Failed to get emails', resp)
             raise base.UnauthenticatedError(resp)
@@ -210,30 +181,4 @@ class GithubAuthPlugin(BaseGithubAuthPlugin):
                 'name': name,
                 'ssh_keys': ssh_keys,
                 'external_auth': {'domain': self.get_domain(),
-                                  'external_id': data.get('id') or login}}
-
-    def get_access_token(self, code):
-        url = "https://github.com/login/oauth/access_token"
-        params = {
-            "client_id": self.conf['client_id'],
-            "client_secret": self.conf['client_secret'],
-            "code": code,
-            "redirect_uri": self.conf['redirect_uri']}
-        headers = {'Accept': 'application/json'}
-        try:
-            resp = requests.post(url, params=params, headers=headers)
-            if not resp.ok:
-                logger.error('Failed to post access tokens')
-                raise base.UnauthenticatedError(resp)
-        except ConnectionError as err:
-            raise base.UnauthenticatedError(err)
-
-        jresp = resp.json()
-        if 'access_token' in jresp:
-            return jresp['access_token']
-        elif 'error' in jresp:
-            err = "An error occured (%s): %s" % (jresp.get('error', None),
-                                                 jresp.get('error_description',
-                                                           None))
-            raise base.UnauthenticatedError(err)
-        return None
+                                  'external_id': self.get_provider_id(data)}}
