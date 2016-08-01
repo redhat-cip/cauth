@@ -28,7 +28,8 @@ logger = logging.getLogger(__name__)
 
 
 OAUTH_PROVIDERS_PLUGINS = ['Github',
-                           'Google', ]
+                           'Google',
+                           'BitBucket', ]
 
 
 class OAuth2Controller(object):

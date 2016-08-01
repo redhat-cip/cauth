@@ -59,6 +59,13 @@ TEST_GOOGLE_AUTH = {
 }
 
 
+TEST_BITBUCKET_AUTH = {
+    'redirect_uri': 'https://fqdn/auth/login/oauth2/callback',
+    'client_id': 'your_bitbucket_app_id',
+    'client_secret': 'your_bitbucket_app_secret',
+}
+
+
 TEST_OPENID_AUTH = {
     'auth_url': 'https://my.openid.provider/+openid',
     'redirect_uri': '/auth/login/openid/callback',
@@ -111,12 +118,14 @@ class TestDrivers(BaseTestAuthPlugin):
             'ldap': TEST_LDAP_AUTH,
             'github': TEST_GITHUB_AUTH,
             'google': TEST_GOOGLE_AUTH,
+            'bitbucket': TEST_BITBUCKET_AUTH,
             'localdb': TEST_LOCALDB_AUTH,
             'users': TEST_USERS_AUTH,
             'keystone': TEST_KEYSTONE_AUTH, }, }
         for plugin in ('GithubPersonalAccessToken',
                        'Github',
                        'Google',
+                       'BitBucket',
                        'Password'):
             driver = self._load_auth_plugin(plugin, conf)
             self.assertEqual(plugin + 'AuthPlugin',
@@ -473,6 +482,66 @@ class TestGoogleAuthPlugin(BaseTestAuthPlugin):
             self.assertEqual("https://accounts.google.com/o/oauth2/v2/auth",
                              user.get('external_auth', {}).get('domain'))
             self.assertEqual("999999",
+                             user.get('external_auth', {}).get('external_id'))
+
+
+class TestBitBucketAuthPlugin(BaseTestAuthPlugin):
+    def setUp(self):
+        conf = {'auth': {'bitbucket': TEST_BITBUCKET_AUTH, }, }
+        self.driver = self._load_auth_plugin('BitBucket', conf)
+
+    def test_get_user_data(self):
+        """Test fetching user data from google apis."""
+        def fake_get(url, *args, **kwargs):
+            if "user?" in url:
+                data = {"created_on": "2016-08-01T15:03:12.323022+00:00",
+                        "display_name": "Joseph Joestar",
+                        "links": {"avatar": {"href": "https://bleh"},
+                                  "followers": {"href": "https://bleh"},
+                                  "following": {},
+                                  "hooks": {},
+                                  "html": {},
+                                  "repositories": {},
+                                  "self": {},
+                                  "snippets": {}},
+                        "location": None,
+                        "type": "user",
+                        "username": "JoJo",
+                        "uuid": "{e6193115-45aa-454f-8d4b-03b4fb2d2083}",
+                        "website": None}
+            elif "emails?" in url:
+                data = {"page": 1,
+                        "pagelen": 10,
+                        "size": 1,
+                        "values": [{"email": "joestar@speedwagon.com",
+                                    "is_confirmed": True,
+                                    "is_primary": True,
+                                    "links": {"self": {"href": "bleh"}},
+                                    "type": "email"}]}
+            elif "ssh" in url:
+                data = [{"pk": 171052,
+                         "key": "ssh-rsa AAAAB3NzaC",
+                         "label": "home"}]
+            else:
+                data = url
+            return FakeResponse(200,
+                                content=json.dumps(data),
+                                is_json=True)
+
+        with patch('requests.get') as get:
+            get.side_effect = fake_get
+            user = self.driver.get_user_data(token='MYTOKEN')
+            self.assertEqual("JoJo",
+                             user.get('login'))
+            self.assertEqual("Joseph Joestar",
+                             user.get('name'))
+            self.assertEqual("joestar@speedwagon.com",
+                             user.get('email'))
+            self.assertEqual([{'key': "ssh-rsa AAAAB3NzaC"}],
+                             user.get('ssh_keys'))
+            self.assertEqual('https://bitbucket.org/site/oauth2/authorize',
+                             user.get('external_auth', {}).get('domain'))
+            self.assertEqual("e6193115-45aa-454f-8d4b-03b4fb2d2083",
                              user.get('external_auth', {}).get('external_id'))
 
 

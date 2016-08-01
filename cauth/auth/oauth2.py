@@ -137,11 +137,12 @@ class BaseOAuth2Plugin(base.AuthProtocolPlugin):
             "code": code,
             "redirect_uri": self.conf['redirect_uri'],
             "grant_type": "authorization_code", }
-        headers = {'Accept': 'application/json'}
+        headers = {'Accept': 'application/json',
+                   'Content-Type': 'application/x-www-form-urlencoded'}
         logger.debug('Fetching access token at %s' % self.access_token_url)
         try:
             resp = requests.post(self.access_token_url,
-                                 params=params,
+                                 data=params,
                                  headers=headers)
             if not resp.ok:
                 err = ('Failed to fetch access tokens at %s with the '

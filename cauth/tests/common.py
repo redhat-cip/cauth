@@ -90,7 +90,7 @@ def githubmock_request(url, request):
     # Handle a token request
     if request.method == 'POST':
         token = None
-        code = urlparse.parse_qs(url.query)['code'][0]
+        code = urlparse.parse_qs(request.body)['code'][0]
         for user in users:
             if users[user]['code'] == code:
                 token = users[user]['token']
