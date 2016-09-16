@@ -78,6 +78,11 @@ TEST_USERS_AUTH = {
         "mail": "user@tests.dom",
         "password": crypt.crypt("userpass", "$6$EFeaxATWohJ"),
     },
+    "user2": {
+        "lastname": "example user2",
+        "mail": "user2@tests.dom",
+        "password": crypt.crypt("utéf8", "$6$EFeaxATWohJ"),
+    },
 }
 
 
@@ -157,6 +162,19 @@ class TestPasswordAuthPlugin(BaseTestAuthPlugin):
                     'ssh_keys': [],
                     'external_auth': {'domain': 'CAUTH_CONF',
                                       'external_id': 'user1'}}
+        authenticated = driver.authenticate(**auth_context)
+        self.assertEqual(expected,
+                         authenticated,
+                         "Got %r" % authenticated)
+        # test valid user with utf8 char in passord
+        auth_context = {'username': 'user2',
+                        'password': 'utéf8'}
+        expected = {'login': 'user2',
+                    'email': 'user2@tests.dom',
+                    'name': 'example user2',
+                    'ssh_keys': [],
+                    'external_auth': {'domain': 'CAUTH_CONF',
+                                      'external_id': 'user2'}}
         authenticated = driver.authenticate(**auth_context)
         self.assertEqual(expected,
                          authenticated,
