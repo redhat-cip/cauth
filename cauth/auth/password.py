@@ -51,8 +51,8 @@ class LocalUserAuthPlugin(BasePasswordAuthPlugin):
     _config_section = "users"
 
     def authenticate(self, **auth_context):
-        username = auth_context.get('username', None)
-        password = auth_context.get('password', None)
+        username = auth_context.get('username', '')
+        password = auth_context.get('password', '')
         user = self.conf.get(username)
         if user:
             salted_password = user.get('password')
@@ -80,8 +80,8 @@ class LDAPAuthPlugin(BasePasswordAuthPlugin):
         return self.conf['host']
 
     def authenticate(self, **auth_context):
-        username = auth_context.get('username', None)
-        password = auth_context.get('password', None)
+        username = auth_context.get('username', '')
+        password = auth_context.get('password', '')
         try:
             conn = ldap.initialize(self.conf['host'])
             conn.set_option(ldap.OPT_REFERRALS, 0)
@@ -218,6 +218,9 @@ class PasswordAuthPlugin(BasePasswordAuthPlugin):
         pass
 
     def authenticate(self, **auth_context):
+        username = auth_context.get('username')
+        if not username:
+            raise base.UnauthenticatedError('No username provided')
         user = None
         for plugin in self.plugins:
             try:

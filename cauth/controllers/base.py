@@ -36,11 +36,12 @@ class BaseLoginController(RestController):
         auth_info['method'] = kwargs.get('method', 'Password')
         auth_info['args'] = {}
         try:
-            auth_args = driver.DriverManager(
+            _args = driver.DriverManager(
                 namespace='cauth.authentication',
                 name=auth_info['method'],
                 invoke_on_load=False).driver.get_args()
-            auth_args.update(kwargs)
+            # set args to default None value
+            auth_args = dict((u, kwargs.get(u, None)) for u in _args)
             auth_info['args'] = auth_args
         except RuntimeError:
             # will be caught later on
