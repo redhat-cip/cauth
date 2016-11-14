@@ -77,6 +77,12 @@ auth = {
         'auth_url': 'https://login.launchpad.net/+openid',
         'redirect_uri': '/auth/login/openid/callback'
     },
+    'openid_connect': {
+        'issuer_url': 'https://accounts.google.com/',
+        'redirect_uri': '/auth/login/openid_connect/callback',
+        'client_id': 'your_google_app_id',
+        'client_secret': 'your_google_app_secret',
+    },
     'keystone': {
         'auth_url': 'http://keystone.server:5000',
     }

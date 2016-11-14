@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 #
+# Copyright (C) 2016 Red Hat
 # Copyright (C) 2014 eNovance SAS <licensing@enovance.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,7 +22,7 @@ from pecan.rest import RestController
 
 from cauth.auth import base as exceptions
 from cauth.controllers import base, github, introspection, openid, oauth2
-from cauth.controllers import apikey
+from cauth.controllers import apikey, openid_connect
 from cauth.utils.common import LOGOUT_MSG
 
 
@@ -49,6 +50,10 @@ class RootController(object):
         logger.error("%s - skipping callback endpoint" % e.message)
     try:
         login.openid = openid.OpenIDController()
+    except exceptions.AuthProtocolNotAvailableError as e:
+        logger.error("%s - skipping callback endpoint" % e.message)
+    try:
+        login.openid_connect = openid_connect.OpenIDConnectController()
     except exceptions.AuthProtocolNotAvailableError as e:
         logger.error("%s - skipping callback endpoint" % e.message)
     about = introspection.IntrospectionController()

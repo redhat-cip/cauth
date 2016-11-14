@@ -60,6 +60,8 @@ setup(
             ('BitBucket = cauth.auth.bitbucket:BitBucketAuthPlugin'),
             ('Password = cauth.auth.password:PasswordAuthPlugin'),
             ('OpenID = cauth.auth.openid:OpenIDAuthPlugin'),
+            ('OpenIDConnect = '
+             'cauth.auth.openid_connect:OpenIDConnectAuthPlugin'),
             ('APIKey = cauth.auth.apikey:APIKeyAuthPlugin')
         ],
         'cauth.service': [

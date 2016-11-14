@@ -19,6 +19,7 @@ import crypt
 import json
 import ldap
 import tempfile
+from contextlib import nested
 from unittest import TestCase
 
 import keystoneclient.exceptions as k_exc
@@ -57,7 +58,6 @@ TEST_GOOGLE_AUTH = {
     'client_id': 'your_google_app_id',
     'client_secret': 'your_google_app_secret',
 }
-
 
 TEST_BITBUCKET_AUTH = {
     'redirect_uri': 'https://fqdn/auth/login/oauth2/callback',
@@ -454,6 +454,108 @@ class TestGithubAuthPlugin(BaseTestAuthPlugin):
                             'error_description': 'No luck',
                             'calling_back': True}
             self.driver.authenticate(**auth_context)
+
+
+TEST_OPENID_CONNECT_AUTH = {
+    'redirect_uri': 'https://fqdn/auth/login/openid_connect/callback',
+    'client_id': 'testid',
+    'client_secret': 'testsecret',
+    'issuer_url': 'https://openid.com',
+}
+
+OPENID_CONNECT_PROVIDER_CONFIG = {
+    "issuer": "https://openid.com",
+    "authorization_endpoint": "https://openid.com/o/oauth2/v2/auth",
+    "token_endpoint": "https://api.openid.com/oauth2/v4/token",
+    "userinfo_endpoint": "https://api.openid.com/oauth2/v3/userinfo",
+    "revocation_endpoint": "https://openid.com/o/oauth2/revoke",
+    "jwks_uri": "https://openid.com/oauth2/v3/certs",
+    "response_types_supported": [
+        "code", "token", "id_token", "code token", "code id_token",
+        "token id_token", "code token id_token", "none"
+    ],
+    "subject_types_supported": ["public"],
+    "id_token_signing_alg_values_supported": ["RS256"],
+    "scopes_supported": ["openid", "email", "profile"],
+    "token_endpoint_auth_methods_supported": ["client_secret_post",
+                                              "client_secret_basic"],
+    "claims_supported": ["aud", "email", "email_verified", "exp",
+                         "family_name", "given_name", "iat", "iss",
+                         "locale", "name", "picture", "sub"],
+    "code_challenge_methods_supported": ["plain", "S256"]
+}
+
+OPENID_CONNECT_TOKEN = {
+    "access_token": "42",
+    "token_type": "Bearer",
+    "expires_in": 3584,
+    "id_token": {
+        "picture": "https://localhost/photo.jpg",
+        "aud": ["blah"],
+        "family_name": "Testy",
+        "iss": "https://accounts.google.com",
+        "email_verified": True,
+        "name": "Test Testy",
+        "at_hash": "hash",
+        "given_name": "Test",
+        "exp": 1479381466,
+        "azp": "azp",
+        "iat": 1479377866,
+        "locale": "en",
+        "email": "testy@openid.com",
+        "hd": "openid.com",
+        "sub": "110047277679781230017"}
+}
+
+
+class TestOpenIDConnectAuthPlugin(BaseTestAuthPlugin):
+    def setUp(self):
+        conf = {'auth': {'openid_connect': TEST_OPENID_CONNECT_AUTH, }, }
+        self.driver = self._load_auth_plugin('OpenIDConnect', conf)
+
+    def test_01_redirect(self):
+        """Test openid connect redirection."""
+        response = MagicMock()
+        auth_context = {'back': '/',
+                        'response': response}
+        patches = [
+            patch('requests.request'),
+            patch('cauth.model.db.put_url'),
+        ]
+        with nested(*patches) as (r, c):
+            r.return_value = FakeResponse(200,
+                                          content=json.dumps(
+                                              OPENID_CONNECT_PROVIDER_CONFIG),
+                                          is_json=True)
+            r.return_value.text = json.dumps(OPENID_CONNECT_PROVIDER_CONFIG)
+            self.driver.authenticate(**auth_context)
+            self.assertIn(u'https://openid.com/o/oauth2/v2/auth?',
+                          response.location)
+            self.assertEqual(302, response.status_code)
+
+    # This test needs to be exited the after the redirect
+    def test_02_authenticate(self):
+        """Test openid connect authentication callback."""
+        qs = "?state=dumb&code=42&authuser=0&session_state=1&prompt=none#"
+        patches = [
+            patch('requests.request'),
+        ]
+        with nested(*patches) as (r, ):
+            r.return_value = FakeResponse(200,
+                                          content=json.dumps(
+                                              OPENID_CONNECT_TOKEN),
+                                          is_json=True)
+            r.return_value.text = json.dumps(OPENID_CONNECT_TOKEN)
+            r.return_value.headers = {
+                'content-type': 'application/json',
+                'cache-control': 'no-store',
+                'pragma': 'no-cache'
+            }
+            # TODO: properly encode the token to avoid the BadSyntax: error
+            # In the meantime, just test the begining of authentication phase
+            with self.assertRaisesRegexp(
+                    base.UnauthenticatedError, 'Couldn\'t fetch user-info'):
+                self.driver._authenticate("dumb", "42", qs)
 
 
 class TestGoogleAuthPlugin(BaseTestAuthPlugin):
