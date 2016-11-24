@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 #
+# Copyright (C) 2016 Red Hat
 # Copyright (C) 2014 eNovance SAS <licensing@enovance.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,60 +15,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from ez_setup import use_setuptools
-    use_setuptools()
-    from setuptools import setup, find_packages
+import setuptools
 
-try:
-    import multiprocessing  # noqa
-except:
-    pass
-
-
-VERSION = '0.8.0'
-
-
-# use requirements.txt for install
-INSTALL_REQUIRES = []
-
-
-setup(
-    name='cauth',
-    version=VERSION,
-    description='Multiprotocol SSO auth frontend for other services',
-    author='Software Factory',
-    author_email='softwarefactory@enovance.com',
-    test_suite='nose.collector',
-    zip_safe=False,
-    include_package_data=True,
-    package_data={'cauth': ['template/*', ]},
-    packages=find_packages(exclude=['ez_setup']),
-
-    install_requires=INSTALL_REQUIRES,
-    url='http://softwarefactory.enovance.com/r/gitweb?p=cauth.git;a=summary',
-    download_url='https://github.com/redhat-cip/cauth/tarball/%s' % VERSION,
-    keywords=['software factory', 'SSO', 'Authentication'],
-
-    entry_points={
-        'cauth.authentication': [
-            ('GithubPersonalAccessToken = '
-             'cauth.auth.github:GithubPersonalAccessTokenAuthPlugin'),
-            ('Github = cauth.auth.github:GithubAuthPlugin'),
-            ('Google = cauth.auth.google:GoogleAuthPlugin'),
-            ('BitBucket = cauth.auth.bitbucket:BitBucketAuthPlugin'),
-            ('Password = cauth.auth.password:PasswordAuthPlugin'),
-            ('OpenID = cauth.auth.openid:OpenIDAuthPlugin'),
-            ('OpenIDConnect = '
-             'cauth.auth.openid_connect:OpenIDConnectAuthPlugin'),
-            ('APIKey = cauth.auth.apikey:APIKeyAuthPlugin')
-        ],
-        'cauth.service': [
-            'gerrit = cauth.service.gerrit:GerritServicePlugin',
-            'redmine = cauth.service.redmine:RedmineServicePlugin',
-            'managesf = cauth.service.managesf:ManageSFServicePlugin',
-        ]
-    },
-)
+setuptools.setup(
+    setup_requires=['pbr'],
+    pbr=True)
