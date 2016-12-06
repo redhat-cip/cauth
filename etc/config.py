@@ -82,6 +82,15 @@ auth = {
         'redirect_uri': '/auth/login/openid_connect/callback',
         'client_id': 'your_google_app_id',
         'client_secret': 'your_google_app_secret',
+# authentication response tokens can vary from provider to provider,
+# use the mapping dictionary to define where the info is stored in the token.
+# if 'email' is used for the login, the trailing "@XXX.XXX" will be removed
+# automatically. Default values match the google OIDC provider.
+        'mapping':  {'login': 'email',
+                     'email': 'email',
+                     'name': 'name',
+                     'uid': 'sub',
+                     'ssh_keys': None}
     },
     'keystone': {
         'auth_url': 'http://keystone.server:5000',

@@ -25,6 +25,7 @@ from unittest import TestCase
 import keystoneclient.exceptions as k_exc
 import httmock
 from mock import patch, MagicMock
+from oic.oic import Client as C
 from pecan import configuration
 import stevedore
 
@@ -461,6 +462,11 @@ TEST_OPENID_CONNECT_AUTH = {
     'client_id': 'testid',
     'client_secret': 'testsecret',
     'issuer_url': 'https://openid.com',
+    'mapping': {'login': 'email',
+                'email': 'email',
+                'name': 'name',
+                'uid': 'sub',
+                'ssh_keys': None}
 }
 
 OPENID_CONNECT_PROVIDER_CONFIG = {
@@ -503,6 +509,7 @@ OPENID_CONNECT_TOKEN = {
         "iat": 1479377866,
         "locale": "en",
         "email": "testy@openid.com",
+        "another_email": "lazer@shoopdawhoop.com",
         "hd": "openid.com",
         "sub": "110047277679781230017"}
 }
@@ -556,6 +563,37 @@ class TestOpenIDConnectAuthPlugin(BaseTestAuthPlugin):
             with self.assertRaisesRegexp(
                     base.UnauthenticatedError, 'Couldn\'t fetch user-info'):
                 self.driver._authenticate("dumb", "42", qs)
+
+    def test_03_mappings(self):
+        """Test custom auth fields mapping."""
+        qs = "?state=dumb&code=42&authuser=0&session_state=1&prompt=none#"
+        self.driver.conf.mapping = {'login': 'azp',
+                                    'email': 'another_email',
+                                    'name': 'family_name',
+                                    'uid': 'picture',
+                                    'ssh_keys': None}
+        patches = [
+            patch.object(C, 'do_access_token_request'),
+        ]
+        with nested(*patches) as (datr, ):
+
+            class fake:
+                def __init__(self, d):
+                    self.d = d
+
+                def to_dict(self):
+                    return self.d
+
+            datr.return_value = fake(OPENID_CONNECT_TOKEN)
+            auth = self.driver._authenticate("dumb", "42", qs)
+            self.assertEqual(auth['login'],
+                             OPENID_CONNECT_TOKEN['id_token']['azp'])
+            self.assertEqual(auth['email'],
+                             OPENID_CONNECT_TOKEN['id_token']['another_email'])
+            self.assertEqual(auth['name'],
+                             OPENID_CONNECT_TOKEN['id_token']['family_name'])
+            self.assertEqual(auth['external_auth']['external_id'],
+                             OPENID_CONNECT_TOKEN['id_token']['picture'])
 
 
 class TestGoogleAuthPlugin(BaseTestAuthPlugin):

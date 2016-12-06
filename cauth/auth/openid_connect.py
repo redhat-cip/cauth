@@ -30,6 +30,13 @@ from cauth.model import db
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_FIELD_MAPPING = {'login': 'email',  # if email is used, remove @...
+                         'email': 'email',
+                         'name': 'name',
+                         'uid': 'sub',
+                         'ssh_keys': None}
+
+
 class OpenIDConnectAuthPlugin(base.AuthProtocolPlugin):
 
     _config_section = "openid_connect"
@@ -108,11 +115,17 @@ class OpenIDConnectAuthPlugin(base.AuthProtocolPlugin):
         if not isinstance(user_info, dict):
             user_info = {}
 
-        email = user_info.get('email')
-        name = user_info.get('name')
-        uid = user_info.get('sub')
-        if not email or '@' not in email or not name or not uid:
-            logger.error("Invalid user token")
+        field_mapping = self.conf.get('mapping', DEFAULT_FIELD_MAPPING)
+
+        login = user_info.get(field_mapping.get('login'))
+        if field_mapping.get('login') == 'email':
+            login = login.split('@')[0]
+        email = user_info.get(field_mapping.get('email'))
+        name = user_info.get(field_mapping.get('name'))
+        uid = user_info.get(field_mapping.get('uid'))
+        ssh_keys = user_info.get(field_mapping.get('ssh_keys'), [])
+        if not login or not email or '@' not in email or not name or not uid:
+            logger.error("Invalid user token or mapping")
             logger.debug("User token error '%s'" % user_info)
             raise base.UnauthenticatedError('Couldn\'t decode token')
 
@@ -120,10 +133,10 @@ class OpenIDConnectAuthPlugin(base.AuthProtocolPlugin):
         # info = client.do_user_info_request(token = token["access_token"])
 
         return {
-            'login': email.split('@')[0],
+            'login': login,
             'email': email,
             'name': name,
-            'ssh_keys': [],
+            'ssh_keys': ssh_keys,
             'external_auth': {'domain': self.get_domain(),
                               'external_id': uid}}
 
